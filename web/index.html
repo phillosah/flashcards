@@ -86,6 +86,7 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 .card-pronunciation span { font-size: 13px; color: rgba(255,255,255,0.6); }
 .card-pronunciation button { color: rgba(255,255,255,0.6); padding: 4px; }
 .card-pronunciation button svg { width: 18px; height: 18px; fill: currentColor; }
+.speak-btn svg { width: 20px; height: 20px; fill: currentColor; vertical-align: middle; }
 .card-hint { font-size: 11px; color: rgba(255,255,255,0.3); padding: 0 12px 10px; display: flex; align-items: center; justify-content: space-between; gap: 4px; }
 .card-hint .card-star-btn { margin-right: auto; }
 .card-hint svg { width: 12px; height: 12px; fill: currentColor; }
@@ -912,7 +913,7 @@ function showCardEdit(folder, card) {
   );
   const pronText = h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text3)', fontSize: '14px' } });
   const pronSpan = h('span', {}, pronunciation);
-  const pronSpeakBtn = h('button', { style: { color: 'var(--accent)', padding: '4px' }, onClick: () => Speech.speak(front, folder.settings.frontLanguage) }, html(ICONS.speaker));
+  const pronSpeakBtn = h('button', { className: 'speak-btn', style: { color: 'var(--accent)', padding: '4px' }, onClick: () => Speech.speak(front, folder.settings.frontLanguage) }, html(ICONS.speaker));
   pronText.appendChild(pronSpan);
   pronText.appendChild(pronSpeakBtn);
   pronEl.appendChild(pronText);
