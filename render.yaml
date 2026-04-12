@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: flashcards
+    runtime: python
+    rootDir: web
+    buildCommand: ""
+    startCommand: python server.py
+    envVars:
+      - key: DATA_FILE
+        value: /data/flashcards_data.json
+    disk:
+      name: flashcards-data
+      mountPath: /data
+      sizeGB: 1

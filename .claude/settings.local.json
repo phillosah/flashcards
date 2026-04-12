@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p FlashCards/Models FlashCards/Extensions FlashCards/Services FlashCards/Views)",
+      "Bash(mv FlashCardsApp.swift FlashCards/)",
+      "Bash(mv Models/Models.swift FlashCards/Models/)",
+      "Bash(mv Extensions/Color+Hex.swift FlashCards/Extensions/)",
+      "Bash(mv Services/DataManager.swift FlashCards/Services/)",
+      "Bash(xargs wc:*)",
+      "Bash(where python:*)",
+      "Bash(where python3:*)",
+      "Bash(python -m http.server 8000 --directory \"C:/Users/Philip/Documents/Claude/FlashCards/web/\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/)",
+      "Bash(curl -s -o /dev/null -w \" %{http_code}\" http://localhost:8000/index.html)",
+      "Bash(kill %1)",
+      "Bash(gh --version)",
+      "Bash(git --version)",
+      "Bash(gh auth:*)"
+    ]
+  }
+}

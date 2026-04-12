@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>FlashCards</title>
+<style>
+/* === RESET & BASE === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #1C1C1E; --surface: #2C2C2E; --surface2: #3A3A3C;
+  --accent: #007AFF; --text: #FFFFFF; --text2: #EBEBF5; --text3: #8E8E93;
+  --danger: #FF3B30; --success: #30D158;
+  --radius: 16px; --card-radius: 20px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+input, textarea, select { font: inherit; color: var(--text); background: var(--surface2); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px 12px; outline: none; width: 100%; }
+input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+textarea { resize: vertical; min-height: 80px; }
+select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238E8E93' stroke-width='2' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+
+/* === APP SHELL === */
+#app { height: 100%; display: flex; flex-direction: column; max-width: 600px; margin: 0 auto; position: relative; overflow: hidden; }
+
+/* === HEADER === */
+.header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; padding-top: calc(12px + var(--safe-top)); min-height: 56px; background: var(--bg); border-bottom: 1px solid rgba(255,255,255,0.06); position: relative; z-index: 10; flex-shrink: 0; }
+.header-title { font-size: 18px; font-weight: 700; text-align: center; flex: 1; }
+.header-btn { font-size: 15px; color: var(--accent); padding: 6px 8px; min-width: 44px; display: flex; align-items: center; justify-content: center; }
+.header-btn svg { width: 22px; height: 22px; fill: currentColor; }
+.header-left, .header-right { display: flex; gap: 8px; min-width: 60px; }
+.header-left { justify-content: flex-start; }
+.header-right { justify-content: flex-end; }
+
+/* === CONTENT === */
+.content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: calc(16px + var(--safe-bottom)); }
+
+/* === SEARCH === */
+.search-bar { padding: 8px 16px; }
+.search-bar input { background: var(--surface); border-radius: 12px; padding: 10px 14px; border: none; }
+.search-bar input::placeholder { color: var(--text3); }
+
+/* === FOLDER LIST === */
+.folder-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: background 0.15s; }
+.folder-row:active { background: rgba(255,255,255,0.05); }
+.folder-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.folder-icon svg { width: 22px; height: 22px; fill: white; }
+.folder-info { flex: 1; min-width: 0; }
+.folder-name { font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.folder-lang { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.folder-count { font-size: 14px; color: var(--text3); font-variant-numeric: tabular-nums; margin-right: 4px; flex-shrink: 0; }
+.folder-settings-btn { padding: 8px; color: var(--text3); flex-shrink: 0; }
+.folder-settings-btn svg { width: 18px; height: 18px; fill: currentColor; }
+.folder-delete-btn { padding: 8px; color: var(--danger); flex-shrink: 0; display: none; }
+.folder-delete-btn svg { width: 18px; height: 18px; fill: currentColor; }
+.folder-row.editing .folder-delete-btn { display: flex; }
+
+/* === EMPTY STATE === */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 40px 20px; text-align: center; color: var(--text3); }
+.empty-state svg { width: 64px; height: 64px; fill: var(--text3); margin-bottom: 16px; opacity: 0.5; }
+.empty-state h2 { color: var(--text); font-size: 20px; margin-bottom: 8px; }
+.empty-state p { font-size: 14px; }
+.empty-state .btn-primary { margin-top: 20px; }
+
+/* === BUTTONS === */
+.btn-primary { background: var(--accent); color: white; padding: 10px 24px; border-radius: 12px; font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary:active { opacity: 0.8; }
+
+/* === FLASH CARD === */
+.card-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; touch-action: pan-y; position: relative; }
+.card-counter { font-size: 13px; color: var(--text3); margin-bottom: 12px; }
+.card-container { width: 100%; max-width: 360px; aspect-ratio: 3/4; perspective: 1200px; position: relative; user-select: none; }
+.card-inner { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.4s ease-in-out; }
+.card-inner.flipped { transform: rotateY(180deg); }
+.card-face { position: absolute; inset: 0; border-radius: var(--card-radius); backface-visibility: hidden; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.12); }
+.card-front { z-index: 2; }
+.card-back { transform: rotateY(180deg); }
+.card-lang-badge { display: inline-block; font-size: 11px; color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.1); padding: 3px 10px; border-radius: 20px; margin: 16px 20px 0; align-self: flex-start; }
+.card-text-area { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px 20px; cursor: pointer; }
+.card-text { font-size: 28px; font-weight: 600; color: white; text-align: center; word-break: break-word; line-height: 1.3; }
+.card-text.placeholder { color: rgba(255,255,255,0.3); font-size: 16px; font-weight: 400; }
+.card-text.back-text { font-size: 22px; font-weight: 500; }
+.card-pronunciation { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 20px 8px; }
+.card-pronunciation span { font-size: 13px; color: rgba(255,255,255,0.6); }
+.card-pronunciation button { color: rgba(255,255,255,0.6); padding: 4px; }
+.card-pronunciation button svg { width: 18px; height: 18px; fill: currentColor; }
+.card-hint { text-align: right; font-size: 11px; color: rgba(255,255,255,0.3); padding: 0 16px 12px; display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.card-hint svg { width: 12px; height: 12px; fill: currentColor; }
+.card-speaker-row { text-align: right; padding: 0 20px 16px; }
+.card-speaker-row button { color: rgba(255,255,255,0.5); padding: 6px; }
+.card-speaker-row button svg { width: 22px; height: 22px; fill: currentColor; }
+
+/* Navigation dots */
+.nav-dots { display: flex; gap: 6px; justify-content: center; padding: 16px 0; flex-wrap: wrap; max-width: 300px; }
+.nav-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.25); transition: all 0.2s; }
+.nav-dot.active { width: 10px; height: 10px; background: var(--accent); }
+.nav-dots-more { font-size: 11px; color: var(--text3); }
+
+/* === MODAL / SHEET === */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: flex; align-items: flex-end; justify-content: center; animation: fadeIn 0.2s; }
+.modal-sheet { background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; animation: slideUp 0.3s ease-out; padding-bottom: calc(16px + var(--safe-bottom)); }
+.modal-center { align-items: center; }
+.modal-center .modal-sheet { border-radius: 16px; max-height: 80vh; margin: 0 16px; padding-bottom: 16px; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.modal-header h3 { font-size: 17px; font-weight: 600; }
+.modal-body { padding: 16px 20px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; color: var(--text3); margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-row { display: flex; gap: 12px; align-items: center; }
+.color-preview { width: 100%; height: 50px; border-radius: 10px; margin-top: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.8); }
+input[type="color"] { width: 44px; height: 44px; padding: 2px; border-radius: 10px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); }
+
+/* === CARD LIST (edit list) === */
+.card-list-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; }
+.card-list-item:active { background: rgba(255,255,255,0.04); }
+.card-list-text { flex: 1; min-width: 0; }
+.card-list-front { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-list-back { font-size: 12px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-list-delete { padding: 8px; color: var(--danger); flex-shrink: 0; }
+.card-list-delete svg { width: 16px; height: 16px; fill: currentColor; }
+
+/* === AUTOPLAY === */
+.autoplay-screen { position: fixed; inset: 0; background: #000; z-index: 200; display: flex; flex-direction: column; }
+.autoplay-top { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; padding-top: calc(12px + var(--safe-top)); }
+.autoplay-done { color: white; font-size: 16px; padding: 8px; }
+.autoplay-counter { font-size: 13px; color: rgba(255,255,255,0.5); }
+.autoplay-card-area { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.autoplay-card-container { width: 100%; max-width: 360px; aspect-ratio: 3/4; perspective: 1200px; }
+.autoplay-controls { display: flex; align-items: center; justify-content: center; gap: 36px; padding: 24px; padding-bottom: calc(40px + var(--safe-bottom)); }
+.autoplay-controls button { color: white; padding: 8px; }
+.autoplay-controls button svg { fill: currentColor; }
+.autoplay-controls .ctrl-main svg { width: 36px; height: 36px; }
+.autoplay-controls .ctrl-nav svg { width: 28px; height: 28px; }
+.autoplay-controls .ctrl-shuffle { opacity: 0.6; }
+.autoplay-controls .ctrl-shuffle svg { width: 24px; height: 24px; }
+
+/* === CONFIRM DIALOG === */
+.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 300; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.15s; }
+.confirm-box { background: var(--surface); border-radius: 16px; padding: 24px; width: 280px; text-align: center; animation: scaleIn 0.2s; }
+.confirm-box h3 { font-size: 17px; margin-bottom: 8px; }
+.confirm-box p { font-size: 14px; color: var(--text3); margin-bottom: 20px; }
+.confirm-actions { display: flex; flex-direction: column; gap: 8px; }
+.confirm-actions button { padding: 12px; border-radius: 12px; font-size: 16px; font-weight: 500; }
+.confirm-actions .btn-action { color: var(--accent); background: rgba(0,122,255,0.12); }
+.confirm-actions .btn-danger { color: var(--danger); background: rgba(255,59,48,0.12); }
+.confirm-actions .btn-cancel { color: var(--text3); }
+
+/* === ANIMATIONS === */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* Swipe transition */
+.card-container.swiping { transition: transform 0.3s ease-out; }
+.card-container.slide-out-left { transform: translateX(-120%); }
+.card-container.slide-out-right { transform: translateX(120%); }
+.card-container.slide-in-left { transform: translateX(-120%); transition: none; }
+.card-container.slide-in-right { transform: translateX(120%); transition: none; }
+.card-container.slide-in { transform: translateX(0); transition: transform 0.25s ease-out; }
+
+/* === CARD NAV BUTTONS === */
+.card-nav-row { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+.card-nav-btn { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.08); color: var(--text); display: flex; align-items: center; justify-content: center; transition: background 0.15s, opacity 0.15s; }
+.card-nav-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.card-nav-btn:active { background: rgba(255,255,255,0.16); }
+.card-nav-btn:disabled { opacity: 0.2; pointer-events: none; }
+.card-nav-next { transform: scaleX(-1); }
+
+/* === SCROLLBAR === */
+.content::-webkit-scrollbar { width: 0; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ============================================================
+// SVG ICONS
+// ============================================================
+const ICONS = {
+  folder: '<svg viewBox="0 0 24 24"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/></svg>',
+  folderPlus: '<svg viewBox="0 0 24 24"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/><line x1="12" y1="11" x2="12" y2="17" stroke="white" stroke-width="2"/><line x1="9" y1="14" x2="15" y2="14" stroke="white" stroke-width="2"/></svg>',
+  gear: '<svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  plus: '<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>',
+  play: '<svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>',
+  pause: '<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>',
+  backward: '<svg viewBox="0 0 24 24"><polygon points="11,5 2,12 11,19"/><polygon points="22,5 13,12 22,19"/></svg>',
+  forward: '<svg viewBox="0 0 24 24"><polygon points="13,19 22,12 13,5"/><polygon points="2,19 11,12 2,5"/></svg>',
+  shuffle: '<svg viewBox="0 0 24 24"><polyline points="16,3 21,3 21,8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><line x1="4" y1="20" x2="21" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="21,16 21,21 16,21" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><line x1="15" y1="15" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4" y1="4" x2="9" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  pencil: '<svg viewBox="0 0 24 24"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke="currentColor" stroke-width="2" fill="none"/></svg>',
+  speaker: '<svg viewBox="0 0 24 24"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
+  flip: '<svg viewBox="0 0 24 24"><polyline points="1,4 1,10 7,10" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><polyline points="23,20 23,14 17,14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  back: '<svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  trash: '<svg viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" fill="none"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="currentColor" stroke-width="2" fill="none"/><path d="M10 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke="currentColor" stroke-width="2" fill="none"/></svg>',
+  backup: '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><polyline points="17,8 12,3 7,8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  download: '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  cards: '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><rect x="6" y="8" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2" fill="none"/></svg>',
+};
+
+// ============================================================
+// LANGUAGES
+// ============================================================
+const LANGUAGES = [
+  { code: 'ja-JP', name: 'Japanese' },
+  { code: 'en-US', name: 'English (US)' },
+  { code: 'en-GB', name: 'English (UK)' },
+  { code: 'zh-CN', name: 'Chinese (Simplified)' },
+  { code: 'zh-TW', name: 'Chinese (Traditional)' },
+  { code: 'ko-KR', name: 'Korean' },
+  { code: 'fr-FR', name: 'French' },
+  { code: 'de-DE', name: 'German' },
+  { code: 'es-ES', name: 'Spanish' },
+  { code: 'it-IT', name: 'Italian' },
+  { code: 'pt-BR', name: 'Portuguese' },
+  { code: 'ru-RU', name: 'Russian' },
+  { code: 'ar-SA', name: 'Arabic' },
+  { code: 'hi-IN', name: 'Hindi' },
+  { code: 'th-TH', name: 'Thai' },
+  { code: 'vi-VN', name: 'Vietnamese' },
+];
+
+function langName(code) {
+  return LANGUAGES.find(l => l.code === code)?.name || code;
+}
+
+// ============================================================
+// DATA MANAGER  (server API with localStorage fallback)
+// ============================================================
+// When served via server.py, data is read/written to a local
+// JSON file (flashcards_data.json). When opened as a file://,
+// falls back to localStorage.
+const DataManager = {
+  KEY: 'flashcards_data',
+  _data: null,
+  _useServer: location.protocol !== 'file:',
+  _saving: false,
+  _pendingSave: false,
+
+  // Async init — must be called once before first render
+  async init() {
+    if (this._useServer) {
+      try {
+        const res = await fetch('/api/data');
+        if (res.ok) { this._data = await res.json(); return; }
+      } catch { /* server not reachable, fall back */ }
+      this._useServer = false;
+    }
+    // localStorage fallback
+    try {
+      const raw = localStorage.getItem(this.KEY);
+      this._data = raw ? JSON.parse(raw) : [];
+    } catch { this._data = []; }
+  },
+
+  load() {
+    if (!this._data) this._data = [];
+    return this._data;
+  },
+
+  save() {
+    if (this._useServer) {
+      // Debounced async save to server
+      if (this._saving) { this._pendingSave = true; return; }
+      this._saving = true;
+      fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this._data, null, 2),
+      }).catch(() => {
+        // Server unreachable — save to localStorage as safety net
+        localStorage.setItem(this.KEY, JSON.stringify(this._data));
+      }).finally(() => {
+        this._saving = false;
+        if (this._pendingSave) { this._pendingSave = false; this.save(); }
+      });
+    } else {
+      localStorage.setItem(this.KEY, JSON.stringify(this._data));
+    }
+  },
+
+  folders() { return this.load(); },
+
+  getFolder(id) { return this.load().find(f => f.id === id); },
+
+  addFolder(name) {
+    this.load().push({ id: uid(), name, cards: [], settings: { frontLanguage: 'ja-JP', backLanguage: 'en-US', frontColorHex: '#1B4F72', backColorHex: '#1E8449' }, createdAt: new Date().toISOString() });
+    this.save();
+  },
+
+  deleteFolder(id) {
+    this._data = this.load().filter(f => f.id !== id);
+    this.save();
+  },
+
+  updateFolder(folder) {
+    const arr = this.load();
+    const i = arr.findIndex(f => f.id === folder.id);
+    if (i !== -1) { arr[i] = folder; this.save(); }
+  },
+
+  addCard(folderId, card) {
+    const f = this.getFolder(folderId);
+    if (f) { f.cards.push(card); this.save(); }
+  },
+
+  updateCard(folderId, card) {
+    const f = this.getFolder(folderId);
+    if (!f) return;
+    const i = f.cards.findIndex(c => c.id === card.id);
+    if (i !== -1) { f.cards[i] = card; this.save(); }
+  },
+
+  deleteCard(folderId, cardId) {
+    const f = this.getFolder(folderId);
+    if (f) { f.cards = f.cards.filter(c => c.id !== cardId); this.save(); }
+  },
+
+  exportJSON() {
+    return JSON.stringify(this.load(), null, 2);
+  },
+
+  importJSON(json) {
+    const data = JSON.parse(json);
+    if (!Array.isArray(data)) throw new Error('Invalid format');
+    this._data = data;
+    this.save();
+  }
+};
+
+function uid() {
+  return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+// ============================================================
+// SPEECH SERVICE  (Web Speech API)
+// ============================================================
+const Speech = {
+  speak(text, lang) {
+    if (!text || !window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang;
+    u.rate = 0.8;
+    speechSynthesis.speak(u);
+  },
+  stop() { if (window.speechSynthesis) speechSynthesis.cancel(); }
+};
+
+// ============================================================
+// PRONUNCIATION (basic kana → romaji)
+// ============================================================
+const KANA_MAP = {
+  'あ':'a','い':'i','う':'u','え':'e','お':'o',
+  'か':'ka','き':'ki','く':'ku','け':'ke','こ':'ko',
+  'さ':'sa','し':'shi','す':'su','せ':'se','そ':'so',
+  'た':'ta','ち':'chi','つ':'tsu','て':'te','と':'to',
+  'な':'na','に':'ni','ぬ':'nu','ね':'ne','の':'no',
+  'は':'ha','ひ':'hi','ふ':'fu','へ':'he','ほ':'ho',
+  'ま':'ma','み':'mi','む':'mu','め':'me','も':'mo',
+  'や':'ya','ゆ':'yu','よ':'yo',
+  'ら':'ra','り':'ri','る':'ru','れ':'re','ろ':'ro',
+  'わ':'wa','を':'wo','ん':'n',
+  'が':'ga','ぎ':'gi','ぐ':'gu','げ':'ge','ご':'go',
+  'ざ':'za','じ':'ji','ず':'zu','ぜ':'ze','ぞ':'zo',
+  'だ':'da','ぢ':'di','づ':'du','で':'de','ど':'do',
+  'ば':'ba','び':'bi','ぶ':'bu','べ':'be','ぼ':'bo',
+  'ぱ':'pa','ぴ':'pi','ぷ':'pu','ぺ':'pe','ぽ':'po',
+  'きゃ':'kya','きゅ':'kyu','きょ':'kyo',
+  'しゃ':'sha','しゅ':'shu','しょ':'sho',
+  'ちゃ':'cha','ちゅ':'chu','ちょ':'cho',
+  'にゃ':'nya','にゅ':'nyu','にょ':'nyo',
+  'ひゃ':'hya','ひゅ':'hyu','ひょ':'hyo',
+  'みゃ':'mya','みゅ':'myu','みょ':'myo',
+  'りゃ':'rya','りゅ':'ryu','りょ':'ryo',
+  'ぎゃ':'gya','ぎゅ':'gyu','ぎょ':'gyo',
+  'じゃ':'ja','じゅ':'ju','じょ':'jo',
+  'びゃ':'bya','びゅ':'byu','びょ':'byo',
+  'ぴゃ':'pya','ぴゅ':'pyu','ぴょ':'pyo',
+  'っ':'Q', // double consonant marker
+  'ー':'-',
+};
+
+// Build katakana map from hiragana (offset 0x60)
+const KATAKANA_MAP = {};
+for (const [k, v] of Object.entries(KANA_MAP)) {
+  const kata = [...k].map(c => {
+    const cp = c.codePointAt(0);
+    return (cp >= 0x3041 && cp <= 0x3096) ? String.fromCodePoint(cp + 0x60) : c;
+  }).join('');
+  KATAKANA_MAP[kata] = v;
+}
+const FULL_KANA = { ...KANA_MAP, ...KATAKANA_MAP };
+
+function kanaToRomaji(text) {
+  let result = '';
+  let i = 0;
+  while (i < text.length) {
+    // Try 2-char combo first (for きゃ etc.)
+    if (i + 1 < text.length) {
+      const two = text.slice(i, i + 2);
+      if (FULL_KANA[two]) { result += FULL_KANA[two]; i += 2; continue; }
+    }
+    const one = text[i];
+    if (FULL_KANA[one]) {
+      if (FULL_KANA[one] === 'Q') {
+        // Double next consonant
+        const next = text[i + 1];
+        const nextR = FULL_KANA[next];
+        if (nextR) result += nextR[0];
+        else result += one;
+      } else {
+        result += FULL_KANA[one];
+      }
+      i++;
+    } else {
+      result += one;
+      i++;
+    }
+  }
+  return result;
+}
+
+function getPronunciation(text, lang) {
+  if (!text.trim()) return '';
+  if (lang.startsWith('ja')) return kanaToRomaji(text);
+  // Chinese/others: no browser-side conversion available
+  return '';
+}
+
+// ============================================================
+// APP STATE & ROUTER
+// ============================================================
+let state = { view: 'main', folderId: null, cardIndex: 0 };
+
+function navigate(view, folderId = null, extra = {}) {
+  state = { view, folderId, cardIndex: 0, ...extra };
+  render();
+}
+
+// ============================================================
+// RENDER ENGINE
+// ============================================================
+const app = document.getElementById('app');
+
+function render() {
+  switch (state.view) {
+    case 'main': renderMain(); break;
+    case 'folder': renderFolder(); break;
+    default: renderMain();
+  }
+}
+
+function h(tag, attrs = {}, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'className') el.className = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
+    else el.setAttribute(k, v);
+  }
+  for (const child of children) {
+    if (typeof child === 'string') el.appendChild(document.createTextNode(child));
+    else if (child) el.appendChild(child);
+  }
+  return el;
+}
+
+function html(str) {
+  const t = document.createElement('template');
+  t.innerHTML = str.trim();
+  return t.content.firstChild;
+}
+
+// ============================================================
+// MAIN VIEW (Folder List)
+// ============================================================
+function renderMain() {
+  const folders = DataManager.folders();
+  let searchText = '';
+
+  function build() {
+    const filtered = searchText
+      ? folders.filter(f => f.name.toLowerCase().includes(searchText.toLowerCase()))
+      : folders;
+
+    app.innerHTML = '';
+    // Header
+    const header = h('div', { className: 'header' },
+      h('div', { className: 'header-left' },
+        h('button', { className: 'header-btn', onClick: showBackupDialog, title: 'Backup' }, html(ICONS.backup)),
+      ),
+      h('div', { className: 'header-title' }, 'Flash Cards'),
+      h('div', { className: 'header-right' },
+        h('button', { className: 'header-btn', onClick: showAddFolderDialog, title: 'New Folder' }, html(ICONS.folderPlus)),
+      ),
+    );
+    app.appendChild(header);
+
+    // Search
+    const searchBar = h('div', { className: 'search-bar' },
+      h('input', { type: 'text', placeholder: 'Search folders...', value: searchText, onInput: e => { searchText = e.target.value; build(); } })
+    );
+    app.appendChild(searchBar);
+
+    // Content
+    const content = h('div', { className: 'content' });
+    if (folders.length === 0) {
+      content.appendChild(h('div', { className: 'empty-state' },
+        html(ICONS.folderPlus),
+        h('h2', {}, 'No Folders Yet'),
+        h('p', {}, 'Create your first folder to start adding flash cards.'),
+        h('button', { className: 'btn-primary', onClick: showAddFolderDialog }, html(ICONS.plus), 'New Folder'),
+      ));
+    } else if (filtered.length === 0) {
+      content.appendChild(h('div', { className: 'empty-state' },
+        h('p', {}, 'No matching folders.'),
+      ));
+    } else {
+      filtered.forEach(folder => content.appendChild(folderRow(folder)));
+    }
+    app.appendChild(content);
+  }
+
+  build();
+}
+
+function folderRow(folder) {
+  const row = h('div', { className: 'folder-row' });
+
+  // Clickable area (icon + info)
+  const clickArea = h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', flex: '1', minWidth: '0', cursor: 'pointer' }, onClick: () => navigate('folder', folder.id) },
+    h('div', { className: 'folder-icon', style: { background: folder.settings.frontColorHex } }, html(ICONS.folder)),
+    h('div', { className: 'folder-info' },
+      h('div', { className: 'folder-name' }, folder.name),
+      h('div', { className: 'folder-lang' }, `${langName(folder.settings.frontLanguage)} → ${langName(folder.settings.backLanguage)}`),
+    ),
+  );
+  row.appendChild(clickArea);
+
+  row.appendChild(h('span', { className: 'folder-count' }, String(folder.cards.length)));
+
+  // Settings button
+  row.appendChild(h('button', { className: 'folder-settings-btn', onClick: e => { e.stopPropagation(); showFolderSettings(folder); }, title: 'Settings' }, html(ICONS.gear)));
+
+  // Delete button
+  row.appendChild(h('button', { className: 'folder-settings-btn', onClick: e => { e.stopPropagation(); showConfirm(`Delete "${folder.name}"?`, 'This will delete the folder and all its cards.', 'Delete', () => { DataManager.deleteFolder(folder.id); render(); }, true); }, title: 'Delete', style: { color: 'var(--danger)' } }, html(ICONS.trash)));
+
+  return row;
+}
+
+// ============================================================
+// FOLDER VIEW (Card Navigation)
+// ============================================================
+function renderFolder() {
+  const folder = DataManager.getFolder(state.folderId);
+  if (!folder) { navigate('main'); return; }
+
+  let cardIndex = Math.min(state.cardIndex || 0, Math.max(0, folder.cards.length - 1));
+  let isFlipped = false;
+  let isDragging = false;
+  let startX = 0;
+  let currentOffset = 0;
+
+  app.innerHTML = '';
+
+  // Header
+  const header = h('div', { className: 'header' },
+    h('div', { className: 'header-left' },
+      h('button', { className: 'header-btn', onClick: () => navigate('main') }, html(ICONS.back)),
+    ),
+    h('div', { className: 'header-title' }, folder.name),
+    h('div', { className: 'header-right' },
+      h('button', { className: 'header-btn', onClick: () => showAutoplay(folder), title: 'Autoplay' }, html(ICONS.play)),
+      h('button', { className: 'header-btn', onClick: () => showCardEditList(folder), title: 'Edit cards' }, html(ICONS.pencil)),
+      h('button', { className: 'header-btn', onClick: () => showCardEdit(folder, null), title: 'Add card' }, html(ICONS.plus)),
+    ),
+  );
+  app.appendChild(header);
+
+  const content = h('div', { className: 'content', style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } });
+
+  if (folder.cards.length === 0) {
+    content.appendChild(h('div', { className: 'empty-state' },
+      html(ICONS.cards),
+      h('h2', {}, 'No Cards Yet'),
+      h('p', {}, 'Add your first flash card to start studying.'),
+      h('button', { className: 'btn-primary', onClick: () => showCardEdit(folder, null) }, html(ICONS.plus), 'Add Card'),
+    ));
+    app.appendChild(content);
+    return;
+  }
+
+  // Card counter
+  const counter = h('div', { className: 'card-counter' });
+  // Card container
+  const container = h('div', { className: 'card-container' });
+  // Nav dots
+  const dotsContainer = h('div', { className: 'nav-dots' });
+
+  const prevBtn = h('button', { className: 'card-nav-btn card-nav-prev', onClick: () => goToCard(cardIndex - 1) }, html(ICONS.back));
+  const nextBtn = h('button', { className: 'card-nav-btn card-nav-next', onClick: () => goToCard(cardIndex + 1) }, html(ICONS.back));
+
+  const cardRow = h('div', { className: 'card-nav-row' }, prevBtn, container, nextBtn);
+
+  content.appendChild(counter);
+  content.appendChild(cardRow);
+  content.appendChild(dotsContainer);
+  app.appendChild(content);
+
+  function buildCard() {
+    const card = folder.cards[cardIndex];
+    if (!card) return;
+    const settings = folder.settings;
+
+    counter.textContent = `${cardIndex + 1} / ${folder.cards.length}`;
+    prevBtn.disabled = cardIndex === 0;
+    nextBtn.disabled = cardIndex === folder.cards.length - 1;
+
+    // Build card HTML
+    container.innerHTML = '';
+    const inner = h('div', { className: 'card-inner' + (isFlipped ? ' flipped' : '') });
+
+    // Front face
+    const front = h('div', { className: 'card-face card-front', style: { background: settings.frontColorHex } },
+      h('span', { className: 'card-lang-badge' }, langName(settings.frontLanguage)),
+      h('div', { className: 'card-text-area', onClick: () => flipCard() },
+        h('div', { className: card.front ? 'card-text' : 'card-text placeholder' }, card.front || 'Tap to flip'),
+      ),
+    );
+
+    if (card.frontPronunciation) {
+      const pronRow = h('div', { className: 'card-pronunciation' },
+        h('span', {}, card.frontPronunciation),
+        h('button', { onClick: e => { e.stopPropagation(); Speech.speak(card.front, settings.frontLanguage); } }, html(ICONS.speaker)),
+      );
+      front.appendChild(pronRow);
+    }
+    front.appendChild(h('div', { className: 'card-hint' }, html(ICONS.flip), 'Tap to flip'));
+
+    // Back face
+    const back = h('div', { className: 'card-face card-back', style: { background: settings.backColorHex } },
+      h('span', { className: 'card-lang-badge' }, langName(settings.backLanguage)),
+      h('div', { className: 'card-text-area', onClick: () => flipCard() },
+        h('div', { className: card.back ? 'card-text back-text' : 'card-text placeholder' }, card.back || 'No translation yet'),
+      ),
+      h('div', { className: 'card-speaker-row' },
+        h('button', { onClick: e => { e.stopPropagation(); Speech.speak(card.back, settings.backLanguage); } }, html(ICONS.speaker)),
+      ),
+    );
+
+    inner.appendChild(front);
+    inner.appendChild(back);
+    container.appendChild(inner);
+
+    // Dots
+    dotsContainer.innerHTML = '';
+    const maxDots = Math.min(folder.cards.length, 20);
+    for (let i = 0; i < maxDots; i++) {
+      dotsContainer.appendChild(h('div', { className: 'nav-dot' + (i === cardIndex ? ' active' : '') }));
+    }
+    if (folder.cards.length > 20) dotsContainer.appendChild(h('span', { className: 'nav-dots-more' }, '...'));
+
+    // Touch/mouse swipe
+    setupSwipe(container);
+  }
+
+  function flipCard() {
+    isFlipped = !isFlipped;
+    buildCard();
+  }
+
+  function goToCard(newIndex) {
+    if (newIndex < 0 || newIndex >= folder.cards.length || newIndex === cardIndex) return;
+    const dir = newIndex > cardIndex ? 'left' : 'right';
+    container.classList.add('swiping', `slide-out-${dir}`);
+    setTimeout(() => {
+      cardIndex = newIndex;
+      state.cardIndex = cardIndex;
+      isFlipped = false;
+      container.classList.remove('swiping', `slide-out-${dir}`);
+      container.classList.add(`slide-in-${dir === 'left' ? 'right' : 'left'}`);
+      buildCard();
+      requestAnimationFrame(() => {
+        container.classList.remove(`slide-in-${dir === 'left' ? 'right' : 'left'}`);
+        container.classList.add('swiping', 'slide-in');
+        setTimeout(() => container.classList.remove('swiping', 'slide-in'), 260);
+      });
+    }, 300);
+  }
+
+  function setupSwipe(el) {
+    function onStart(x) { isDragging = true; startX = x; currentOffset = 0; }
+    function onMove(x) { if (!isDragging) return; currentOffset = x - startX; el.style.transform = `translateX(${currentOffset * 0.4}px)`; }
+    function onEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      el.style.transform = '';
+      if (currentOffset < -80) goToCard(cardIndex + 1);
+      else if (currentOffset > 80) goToCard(cardIndex - 1);
+    }
+    el.addEventListener('touchstart', e => onStart(e.touches[0].clientX), { passive: true });
+    el.addEventListener('touchmove', e => onMove(e.touches[0].clientX), { passive: true });
+    el.addEventListener('touchend', onEnd);
+    el.addEventListener('mousedown', e => { e.preventDefault(); onStart(e.clientX); });
+    document.addEventListener('mousemove', e => onMove(e.clientX));
+    document.addEventListener('mouseup', onEnd);
+  }
+
+  buildCard();
+}
+
+// ============================================================
+// MODALS & DIALOGS
+// ============================================================
+function closeModal() {
+  document.querySelectorAll('.modal-overlay, .confirm-overlay, .autoplay-screen').forEach(el => el.remove());
+}
+
+function showConfirm(title, message, actionText, onAction, isDanger = false) {
+  const overlay = h('div', { className: 'confirm-overlay', onClick: e => { if (e.target === overlay) overlay.remove(); } },
+    h('div', { className: 'confirm-box' },
+      h('h3', {}, title),
+      h('p', {}, message),
+      h('div', { className: 'confirm-actions' },
+        h('button', { className: isDanger ? 'btn-danger' : 'btn-action', onClick: () => { overlay.remove(); onAction(); } }, actionText),
+        h('button', { className: 'btn-cancel', onClick: () => overlay.remove() }, 'Cancel'),
+      ),
+    ),
+  );
+  document.body.appendChild(overlay);
+}
+
+function showAddFolderDialog() {
+  const overlay = h('div', { className: 'confirm-overlay' });
+  const input = h('input', { type: 'text', placeholder: 'Folder name', autofocus: 'true', style: { marginBottom: '16px' } });
+  const box = h('div', { className: 'confirm-box' },
+    h('h3', {}, 'New Folder'),
+    input,
+    h('div', { className: 'confirm-actions' },
+      h('button', { className: 'btn-action', onClick: () => {
+        const name = input.value.trim();
+        if (name) { DataManager.addFolder(name); overlay.remove(); render(); }
+      } }, 'Create'),
+      h('button', { className: 'btn-cancel', onClick: () => overlay.remove() }, 'Cancel'),
+    ),
+  );
+  overlay.appendChild(box);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  setTimeout(() => input.focus(), 100);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { box.querySelector('.btn-action').click(); } });
+}
+
+function showBackupDialog() {
+  showConfirm('Backup & Restore', 'Export your data as JSON or import from a file.', 'Export Backup', () => {
+    const json = DataManager.exportJSON();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.href = url; a.download = `flashcards_backup_${ts}.json`; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // Add import button to the dialog
+  setTimeout(() => {
+    const actions = document.querySelector('.confirm-actions');
+    if (!actions) return;
+    const importBtn = h('button', { className: 'btn-action', onClick: () => {
+      const fi = document.createElement('input');
+      fi.type = 'file'; fi.accept = '.json';
+      fi.onchange = () => {
+        const file = fi.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            DataManager.importJSON(reader.result);
+            closeModal();
+            document.querySelector('.confirm-overlay')?.remove();
+            render();
+          } catch (err) {
+            alert('Import failed: ' + err.message);
+          }
+        };
+        reader.readAsText(file);
+      };
+      fi.click();
+    } }, 'Import Backup');
+    actions.insertBefore(importBtn, actions.children[1]);
+  }, 0);
+}
+
+// ============================================================
+// FOLDER SETTINGS MODAL
+// ============================================================
+function showFolderSettings(folder) {
+  const s = { ...folder.settings };
+
+  function langSelect(label, value, onChange) {
+    const sel = h('select', { value, onChange: e => onChange(e.target.value) });
+    LANGUAGES.forEach(l => {
+      const opt = h('option', { value: l.code }, l.name);
+      if (l.code === value) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    return h('div', { className: 'form-group' },
+      h('label', {}, label),
+      sel,
+    );
+  }
+
+  const overlay = h('div', { className: 'modal-overlay', onClick: e => { if (e.target === overlay) overlay.remove(); } });
+  const sheet = h('div', { className: 'modal-sheet' });
+
+  const frontPreview = h('div', { className: 'color-preview', style: { background: s.frontColorHex } }, 'Front Preview');
+  const backPreview = h('div', { className: 'color-preview', style: { background: s.backColorHex } }, 'Back Preview');
+
+  const frontColorInput = h('input', { type: 'color', value: s.frontColorHex, onInput: e => { s.frontColorHex = e.target.value; frontPreview.style.background = e.target.value; } });
+  const backColorInput = h('input', { type: 'color', value: s.backColorHex, onInput: e => { s.backColorHex = e.target.value; backPreview.style.background = e.target.value; } });
+
+  // Folder name
+  const nameInput = h('input', { type: 'text', value: folder.name });
+
+  sheet.appendChild(h('div', { className: 'modal-header' },
+    h('button', { onClick: () => overlay.remove() }, 'Cancel'),
+    h('h3', {}, 'Folder Settings'),
+    h('button', { style: { fontWeight: '700', color: 'var(--accent)' }, onClick: () => {
+      folder.name = nameInput.value.trim() || folder.name;
+      folder.settings = s;
+      DataManager.updateFolder(folder);
+      overlay.remove();
+      render();
+    } }, 'Save'),
+  ));
+
+  sheet.appendChild(h('div', { className: 'modal-body' },
+    h('div', { className: 'form-group' }, h('label', {}, 'Folder Name'), nameInput),
+    langSelect('Front Card Language', s.frontLanguage, v => s.frontLanguage = v),
+    langSelect('Back Card Language', s.backLanguage, v => s.backLanguage = v),
+    h('div', { className: 'form-group' },
+      h('label', {}, 'Front Card Color'),
+      h('div', { className: 'form-row' }, frontColorInput),
+      frontPreview,
+    ),
+    h('div', { className: 'form-group' },
+      h('label', {}, 'Back Card Color'),
+      h('div', { className: 'form-row' }, backColorInput),
+      backPreview,
+    ),
+  ));
+
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay);
+}
+
+// ============================================================
+// CARD EDIT MODAL
+// ============================================================
+function showCardEdit(folder, card) {
+  const isNew = !card;
+  let front = card?.front || '';
+  let back = card?.back || '';
+  let pronunciation = card?.frontPronunciation || '';
+  let pronTimer = null;
+
+  const overlay = h('div', { className: 'modal-overlay', onClick: e => { if (e.target === overlay) { clearTimeout(pronTimer); overlay.remove(); } } });
+  const sheet = h('div', { className: 'modal-sheet' });
+
+  const pronEl = h('div', { className: 'form-group', style: { display: pronunciation ? 'block' : 'none' } },
+    h('label', {}, 'Pronunciation'),
+  );
+  const pronText = h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text3)', fontSize: '14px' } });
+  const pronSpan = h('span', {}, pronunciation);
+  const pronSpeakBtn = h('button', { style: { color: 'var(--accent)', padding: '4px' }, onClick: () => Speech.speak(front, folder.settings.frontLanguage) }, html(ICONS.speaker));
+  pronText.appendChild(pronSpan);
+  pronText.appendChild(pronSpeakBtn);
+  pronEl.appendChild(pronText);
+
+  function schedulePron() {
+    clearTimeout(pronTimer);
+    pronTimer = setTimeout(() => {
+      const p = getPronunciation(front, folder.settings.frontLanguage);
+      if (p) {
+        pronunciation = p;
+        pronSpan.textContent = p;
+        pronEl.style.display = 'block';
+      }
+    }, 2000);
+  }
+
+  const frontInput = h('textarea', { placeholder: 'Front text...', rows: '3', onInput: e => { front = e.target.value; schedulePron(); } });
+  frontInput.value = front;
+
+  const backInput = h('textarea', { placeholder: 'Translation / meaning...', rows: '3', onInput: e => { back = e.target.value; } });
+  backInput.value = back;
+
+  const saveBtn = h('button', { style: { fontWeight: '700', color: 'var(--accent)' }, onClick: () => {
+    if (!front.trim()) return;
+    clearTimeout(pronTimer);
+    if (isNew) {
+      DataManager.addCard(folder.id, { id: uid(), front: front.trim(), back: back.trim(), frontPronunciation: pronunciation, createdAt: new Date().toISOString() });
+    } else {
+      card.front = front.trim();
+      card.back = back.trim();
+      card.frontPronunciation = pronunciation;
+      DataManager.updateCard(folder.id, card);
+    }
+    overlay.remove();
+    render();
+  } }, 'Save');
+
+  sheet.appendChild(h('div', { className: 'modal-header' },
+    h('button', { onClick: () => { clearTimeout(pronTimer); overlay.remove(); } }, 'Cancel'),
+    h('h3', {}, isNew ? 'New Card' : 'Edit Card'),
+    saveBtn,
+  ));
+
+  sheet.appendChild(h('div', { className: 'modal-body' },
+    h('div', { className: 'form-group' },
+      h('label', {}, `Front (${langName(folder.settings.frontLanguage)})`),
+      frontInput,
+    ),
+    pronEl,
+    h('div', { className: 'form-group' },
+      h('label', {}, `Back (${langName(folder.settings.backLanguage)})`),
+      backInput,
+    ),
+  ));
+
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay);
+  setTimeout(() => frontInput.focus(), 100);
+}
+
+// ============================================================
+// CARD EDIT LIST MODAL
+// ============================================================
+function showCardEditList(folder) {
+  const overlay = h('div', { className: 'modal-overlay', onClick: e => { if (e.target === overlay) overlay.remove(); } });
+
+  function buildList() {
+    const freshFolder = DataManager.getFolder(folder.id);
+    if (!freshFolder) { overlay.remove(); return; }
+
+    const sheet = h('div', { className: 'modal-sheet' });
+    sheet.appendChild(h('div', { className: 'modal-header' },
+      h('div'),
+      h('h3', {}, 'Edit Cards'),
+      h('button', { style: { fontWeight: '700', color: 'var(--accent)' }, onClick: () => { overlay.remove(); render(); } }, 'Done'),
+    ));
+
+    const body = h('div', { style: { paddingBottom: '20px' } });
+
+    if (freshFolder.cards.length === 0) {
+      body.appendChild(h('div', { style: { textAlign: 'center', padding: '40px 20px', color: 'var(--text3)' } }, 'No cards to edit.'));
+    } else {
+      freshFolder.cards.forEach(card => {
+        const row = h('div', { className: 'card-list-item' },
+          h('div', { className: 'card-list-text', onClick: () => {
+            overlay.innerHTML = '';
+            showCardEdit(freshFolder, card);
+            // Re-show list when card edit closes
+            const checkInterval = setInterval(() => {
+              if (!document.querySelector('.modal-overlay')) { clearInterval(checkInterval); return; }
+              if (document.querySelectorAll('.modal-overlay').length === 1) {
+                clearInterval(checkInterval);
+              }
+            }, 200);
+          } },
+            h('div', { className: 'card-list-front' }, card.front || '(empty front)'),
+            h('div', { className: 'card-list-back' }, card.back || '(no translation)'),
+          ),
+          h('button', { className: 'card-list-delete', onClick: e => {
+            e.stopPropagation();
+            DataManager.deleteCard(freshFolder.id, card.id);
+            overlay.innerHTML = '';
+            overlay.appendChild(buildListContent());
+          } }, html(ICONS.trash)),
+        );
+        body.appendChild(row);
+      });
+    }
+
+    sheet.appendChild(body);
+    return sheet;
+  }
+
+  function buildListContent() {
+    return buildList();
+  }
+
+  overlay.appendChild(buildList());
+  document.body.appendChild(overlay);
+}
+
+// ============================================================
+// AUTOPLAY
+// ============================================================
+function showAutoplay(folder) {
+  if (folder.cards.length === 0) return;
+
+  let shuffled = [...Array(folder.cards.length).keys()];
+  let pos = 0;
+  let isFlipped = false;
+  let playing = true;
+  let timer = null;
+  const INTERVAL = 3000;
+
+  function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  shuffleArray(shuffled);
+
+  const screen = h('div', { className: 'autoplay-screen' });
+
+  function currentCard() { return folder.cards[shuffled[pos]]; }
+
+  function buildUI() {
+    const card = currentCard();
+    if (!card) return;
+    const settings = folder.settings;
+
+    screen.innerHTML = '';
+
+    // Top bar
+    screen.appendChild(h('div', { className: 'autoplay-top' },
+      h('button', { className: 'autoplay-done', onClick: () => { stopTimer(); Speech.stop(); screen.remove(); render(); } }, 'Done'),
+      h('span', { className: 'autoplay-counter' }, `${pos + 1} / ${shuffled.length}`),
+    ));
+
+    // Card area
+    const cardArea = h('div', { className: 'autoplay-card-area' });
+    const container = h('div', { className: 'autoplay-card-container' });
+    const inner = h('div', { className: 'card-inner' + (isFlipped ? ' flipped' : '') });
+
+    // Front
+    const front = h('div', { className: 'card-face card-front', style: { background: settings.frontColorHex } },
+      h('span', { className: 'card-lang-badge' }, langName(settings.frontLanguage)),
+      h('div', { className: 'card-text-area' },
+        h('div', { className: card.front ? 'card-text' : 'card-text placeholder' }, card.front || '(empty)'),
+      ),
+    );
+    if (card.frontPronunciation) {
+      front.appendChild(h('div', { className: 'card-pronunciation' },
+        h('span', {}, card.frontPronunciation),
+      ));
+    }
+
+    // Back
+    const back = h('div', { className: 'card-face card-back', style: { background: settings.backColorHex } },
+      h('span', { className: 'card-lang-badge' }, langName(settings.backLanguage)),
+      h('div', { className: 'card-text-area' },
+        h('div', { className: card.back ? 'card-text back-text' : 'card-text placeholder' }, card.back || '(no translation)'),
+      ),
+    );
+
+    inner.appendChild(front);
+    inner.appendChild(back);
+    container.appendChild(inner);
+
+    // Tap to flip
+    container.addEventListener('click', () => { manualFlip(); });
+
+    // Swipe
+    let sx = 0, so = 0, dragging = false;
+    container.addEventListener('touchstart', e => { sx = e.touches[0].clientX; dragging = true; }, { passive: true });
+    container.addEventListener('touchmove', e => { if (dragging) { so = e.touches[0].clientX - sx; container.style.transform = `translateX(${so * 0.4}px)`; } }, { passive: true });
+    container.addEventListener('touchend', () => {
+      dragging = false;
+      container.style.transform = '';
+      if (so < -60) goNext();
+      else if (so > 60) goPrev();
+      so = 0;
+    });
+
+    cardArea.appendChild(container);
+    screen.appendChild(cardArea);
+
+    // Controls
+    screen.appendChild(h('div', { className: 'autoplay-controls' },
+      h('button', { className: 'ctrl-nav', onClick: goPrev }, html(ICONS.backward)),
+      h('button', { className: 'ctrl-main', onClick: togglePlay }, html(playing ? ICONS.pause : ICONS.play)),
+      h('button', { className: 'ctrl-nav', onClick: goNext }, html(ICONS.forward)),
+      h('button', { className: 'ctrl-shuffle', onClick: doShuffle }, html(ICONS.shuffle)),
+    ));
+  }
+
+  function manualFlip() {
+    stopTimer();
+    isFlipped = !isFlipped;
+    buildUI();
+    const card = currentCard();
+    if (isFlipped && card?.back) {
+      Speech.speak(card.back, folder.settings.backLanguage);
+    } else if (!isFlipped && card?.front) {
+      Speech.speak(card.front, folder.settings.frontLanguage);
+    }
+    if (playing) startTimer();
+  }
+
+  function advance() {
+    if (!isFlipped) {
+      isFlipped = true;
+      buildUI();
+      const card = currentCard();
+      if (card?.back) Speech.speak(card.back, folder.settings.backLanguage);
+    } else {
+      goNext();
+    }
+  }
+
+  function goNext() {
+    pos = (pos + 1) % shuffled.length;
+    isFlipped = false;
+    buildUI();
+    speakFront();
+    if (playing) { stopTimer(); startTimer(); }
+  }
+
+  function goPrev() {
+    pos = (pos - 1 + shuffled.length) % shuffled.length;
+    isFlipped = false;
+    buildUI();
+    speakFront();
+    if (playing) { stopTimer(); startTimer(); }
+  }
+
+  function doShuffle() {
+    shuffleArray(shuffled);
+    pos = 0;
+    isFlipped = false;
+    buildUI();
+    speakFront();
+    if (playing) { stopTimer(); startTimer(); }
+  }
+
+  function speakFront() {
+    const card = currentCard();
+    if (card?.front) Speech.speak(card.front, folder.settings.frontLanguage);
+  }
+
+  function togglePlay() {
+    playing = !playing;
+    if (playing) startTimer(); else stopTimer();
+    buildUI();
+  }
+
+  function startTimer() { stopTimer(); timer = setInterval(advance, INTERVAL); }
+  function stopTimer() { clearInterval(timer); timer = null; }
+
+  buildUI();
+  speakFront();
+  startTimer();
+  document.body.appendChild(screen);
+}
+
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+document.addEventListener('keydown', e => {
+  // Ignore when typing in inputs
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+  if (state.view === 'folder') {
+    const folder = DataManager.getFolder(state.folderId);
+    if (!folder || folder.cards.length === 0) return;
+    if (e.key === 'ArrowLeft') { state.cardIndex = Math.max(0, (state.cardIndex || 0) - 1); render(); }
+    if (e.key === 'ArrowRight') { state.cardIndex = Math.min(folder.cards.length - 1, (state.cardIndex || 0) + 1); render(); }
+    if (e.key === ' ') { e.preventDefault(); /* Flip handled by click */ }
+  }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+DataManager.init().then(() => render());
+</script>
+</body>
+</html>
