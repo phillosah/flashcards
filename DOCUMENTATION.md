@@ -166,6 +166,7 @@ All data is stored as plain JSON objects.
 | `front` | string | `""` | Text shown on the front of the card |
 | `back` | string | `""` | Translation / meaning shown on the back |
 | `frontPronunciation` | string | `""` | Cached romaji for the front text |
+| `starred` | boolean | `false` | Marks the card for additional revision |
 | `createdAt` | ISO 8601 string | now | Creation timestamp |
 
 ### `FolderSettings`
@@ -238,6 +239,7 @@ When `index.html` is opened directly, data is stored in `localStorage` under the
         "front": "みず",
         "back": "water",
         "frontPronunciation": "mizu",
+        "starred": false,
         "createdAt": "2026-03-26T10:05:00Z"
       }
     ]
@@ -306,26 +308,46 @@ A built-in kana-to-romaji converter runs automatically 2 seconds after you stop 
 - **Swipe** left or right (touch or mouse drag, 80 px threshold) to navigate.
 - **Navigation dots** at the bottom show position (capped at 20).
 - **Tap the card** to flip it (3D CSS animation, 0.4 s).
-- **Toolbar:** play (autoplay), pencil (edit list), plus (new card).
+- **Toolbar buttons:**
+
+| Icon | Action |
+|---|---|
+| ▶ | Autoplay in card order |
+| ⇄ | Autoplay in random/shuffled order |
+| ▶★ | Autoplay starred cards only (random order) |
+| ✏ | Open card edit list |
+| + | Add a new card |
+
 - **Keyboard:** ← / → arrow keys navigate cards.
 
 ### Card flip
 
 Both card faces are rendered in a CSS 3D flip container:
 
-- **Front face** — language badge, card text, optional pronunciation row with speaker button, "tap to flip" hint.
-- **Back face** — language badge, translation text, speaker button.
+- **Front face** — language badge, card text, optional pronunciation row with speaker button, ★ star button (bottom left), "tap to flip" hint (bottom right).
+- **Back face** — language badge, translation text, ★ star button (bottom left), speaker button (bottom right).
+
+The star button marks the card for additional revision. Tapping it toggles between an outline star (not starred) and a filled gold star (starred). The star state is the same on both faces and persists with the card.
 
 Card resets to front side whenever you navigate to a different card.
 
 ### Autoplay
 
-Full-screen mode for hands-free review:
+Full-screen mode for hands-free review. Three entry points from the folder toolbar:
 
-1. Cards are shuffled on open; the first card's front is spoken aloud.
+| Button | Cards played |
+|---|---|
+| ▶ | All cards in folder order |
+| ⇄ | All cards in random order |
+| ▶★ | Starred cards only, random order |
+
+**Playback flow:**
+1. First card's front text is spoken aloud on entry.
 2. Timer fires every **3 seconds**.
 3. First tick: card flips to back, back text is spoken.
 4. Second tick: advances to next card.
+
+The counter shows **★ 1 / 5** when playing starred cards only.
 
 | Control | Action |
 |---|---|
@@ -348,7 +370,7 @@ Tap the card to flip manually. Swipe left/right (60 px threshold) to navigate.
 Used for both adding and editing a card:
 
 - Front text area (label shows the front language).
-- Pronunciation row (appears automatically after 2 s idle, if applicable).
+- Pronunciation row (appears automatically after 2 s idle for Japanese kana): shows the romaji text and a speaker button to hear it aloud.
 - Back text area (label shows the back language).
 - Cancel / Save (Save disabled if front is empty).
 
@@ -387,8 +409,9 @@ Tap the **gear icon** on any folder row:
 
 - Open a folder.
 - **Tap the card** to flip between front and back.
-- Use the **← →  buttons** (or swipe, or arrow keys) to move between cards.
+- Use the **← → buttons** (or swipe, or arrow keys) to move between cards.
 - Tap the **speaker icon** on either face to hear the text read aloud.
+- Tap the **★ star button** (bottom of card) to mark a card for extra revision. Tap again to unstar.
 
 ### Edit or delete a card
 
@@ -398,10 +421,17 @@ Tap the **gear icon** on any folder row:
 
 ### Autoplay
 
-1. Tap **▶** in the folder header.
-2. Cards play in random order, auto-flipping every 3 seconds.
-3. Use the bottom controls to pause, skip, or re-shuffle.
-4. Tap **Done** to exit.
+| To play… | Tap… |
+|---|---|
+| All cards in order | **▶** in the folder header |
+| All cards shuffled | **⇄** in the folder header |
+| Starred cards only | **▶★** in the folder header |
+
+During autoplay, cards auto-flip every 3 seconds. Use the bottom controls to pause, skip forward/back, or re-shuffle. Tap **Done** to exit.
+
+### Mark cards for revision (starring)
+
+Tap the **★** button on the bottom of any card (front or back face) to star it — the star turns gold. Star cards you find difficult or want to review again. Use the **▶★** toolbar button to play only your starred cards in a focused session.
 
 ---
 
