@@ -168,6 +168,9 @@ input[type="color"] { width: 44px; height: 44px; padding: 2px; border-radius: 10
 .card-nav-btn:disabled { opacity: 0.2; pointer-events: none; }
 .card-nav-next { transform: scaleX(-1); }
 
+/* === STORAGE BADGE === */
+.storage-badge { font-size: 11px; margin-left: 6px; opacity: 0.5; vertical-align: middle; }
+
 /* === SCROLLBAR === */
 .content::-webkit-scrollbar { width: 0; }
 </style>
@@ -491,7 +494,13 @@ function renderMain() {
       h('div', { className: 'header-left' },
         h('button', { className: 'header-btn', onClick: showBackupDialog, title: 'Backup' }, html(ICONS.backup)),
       ),
-      h('div', { className: 'header-title' }, 'Flash Cards'),
+      h('div', { className: 'header-title' },
+        'Flash Cards',
+        h('span', {
+          className: 'storage-badge',
+          title: DataManager._useServer ? 'Saving to server file' : 'Saving to localStorage'
+        }, DataManager._useServer ? '☁' : '⚠'),
+      ),
       h('div', { className: 'header-right' },
         h('button', { className: 'header-btn', onClick: showAddFolderDialog, title: 'New Folder' }, html(ICONS.folderPlus)),
       ),
