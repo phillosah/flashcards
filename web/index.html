@@ -86,7 +86,8 @@ select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmln
 .card-pronunciation span { font-size: 13px; color: rgba(255,255,255,0.6); }
 .card-pronunciation button { color: rgba(255,255,255,0.6); padding: 4px; }
 .card-pronunciation button svg { width: 18px; height: 18px; fill: currentColor; }
-.card-hint { text-align: right; font-size: 11px; color: rgba(255,255,255,0.3); padding: 0 16px 12px; display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.card-hint { font-size: 11px; color: rgba(255,255,255,0.3); padding: 0 12px 10px; display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.card-hint .card-star-btn { margin-right: auto; }
 .card-hint svg { width: 12px; height: 12px; fill: currentColor; }
 .card-speaker-row { text-align: right; padding: 0 20px 16px; }
 .card-speaker-row button { color: rgba(255,255,255,0.5); padding: 6px; }
@@ -168,6 +169,12 @@ input[type="color"] { width: 44px; height: 44px; padding: 2px; border-radius: 10
 .card-nav-btn:disabled { opacity: 0.2; pointer-events: none; }
 .card-nav-next { transform: scaleX(-1); }
 
+/* === STAR BUTTON === */
+.card-star-btn { color: rgba(255,255,255,0.35); padding: 4px; transition: color 0.2s, transform 0.15s; flex-shrink: 0; }
+.card-star-btn svg { width: 18px; height: 18px; }
+.card-star-btn:active { transform: scale(1.2); }
+.card-star-btn.starred { color: #FFD60A; }
+
 /* === STORAGE BADGE === */
 .storage-badge { font-size: 11px; margin-left: 6px; opacity: 0.5; vertical-align: middle; }
 
@@ -200,6 +207,9 @@ const ICONS = {
   backup: '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><polyline points="17,8 12,3 7,8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   download: '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><polyline points="7,10 12,15 17,10" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   cards: '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><rect x="6" y="8" width="16" height="14" rx="2" stroke="currentColor" stroke-width="2" fill="none"/></svg>',
+  star: '<svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/></svg>',
+  starFilled: '<svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="currentColor" stroke-linejoin="round"/></svg>',
+  starPlay: '<svg viewBox="0 0 24 24"><polygon points="2,4 13,12 2,20" fill="currentColor"/><g transform="translate(13,1) scale(0.46)"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="currentColor"/></g></svg>',
 };
 
 // ============================================================
@@ -583,6 +593,11 @@ function renderFolder() {
     h('div', { className: 'header-right' },
       h('button', { className: 'header-btn', onClick: () => showAutoplay(folder, false), title: 'Autoplay in order' }, html(ICONS.play)),
       h('button', { className: 'header-btn', onClick: () => showAutoplay(folder, true), title: 'Autoplay shuffled' }, html(ICONS.shuffle)),
+      h('button', { className: 'header-btn', onClick: () => {
+        const f = DataManager.getFolder(folder.id);
+        const hasStarred = f?.cards.some(c => c.starred);
+        if (hasStarred) showAutoplay(f, true, true);
+      }, title: 'Autoplay starred cards' }, html(ICONS.starPlay)),
       h('button', { className: 'header-btn', onClick: () => showCardEditList(folder), title: 'Edit cards' }, html(ICONS.pencil)),
       h('button', { className: 'header-btn', onClick: () => showCardEdit(folder, null), title: 'Add card' }, html(ICONS.plus)),
     ),
@@ -647,7 +662,11 @@ function renderFolder() {
       );
       front.appendChild(pronRow);
     }
-    front.appendChild(h('div', { className: 'card-hint' }, html(ICONS.flip), 'Tap to flip'));
+    front.appendChild(h('div', { className: 'card-hint' },
+      h('button', { className: 'card-star-btn' + (card.starred ? ' starred' : ''), onClick: toggleStar },
+        html(card.starred ? ICONS.starFilled : ICONS.star)),
+      html(ICONS.flip), 'Tap to flip',
+    ));
 
     // Back face
     const back = h('div', { className: 'card-face card-back', style: { background: settings.backColorHex } },
@@ -656,6 +675,8 @@ function renderFolder() {
         h('div', { className: card.back ? 'card-text back-text' : 'card-text placeholder' }, card.back || 'No translation yet'),
       ),
       h('div', { className: 'card-speaker-row' },
+        h('button', { className: 'card-star-btn' + (card.starred ? ' starred' : ''), onClick: toggleStar },
+          html(card.starred ? ICONS.starFilled : ICONS.star)),
         h('button', { onClick: e => { e.stopPropagation(); Speech.speak(card.back, settings.backLanguage); } }, html(ICONS.speaker)),
       ),
     );
@@ -678,6 +699,13 @@ function renderFolder() {
 
   function flipCard() {
     isFlipped = !isFlipped;
+    buildCard();
+  }
+
+  function toggleStar(e) {
+    e.stopPropagation();
+    const card = folder.cards[cardIndex];
+    DataManager.updateCard(folder.id, { ...card, starred: !card.starred });
     buildCard();
   }
 
@@ -1009,10 +1037,11 @@ function showCardEditList(folder) {
 // ============================================================
 // AUTOPLAY
 // ============================================================
-function showAutoplay(folder, random = false) {
-  if (folder.cards.length === 0) return;
+function showAutoplay(folder, random = false, starredOnly = false) {
+  const allCards = starredOnly ? folder.cards.filter(c => c.starred) : folder.cards;
+  if (allCards.length === 0) return;
 
-  let shuffled = [...Array(folder.cards.length).keys()];
+  let shuffled = [...Array(allCards.length).keys()];
   let pos = 0;
   let isFlipped = false;
   let playing = true;
@@ -1031,7 +1060,7 @@ function showAutoplay(folder, random = false) {
 
   const screen = h('div', { className: 'autoplay-screen' });
 
-  function currentCard() { return folder.cards[shuffled[pos]]; }
+  function currentCard() { return allCards[shuffled[pos]]; }
 
   function buildUI() {
     const card = currentCard();
@@ -1043,7 +1072,7 @@ function showAutoplay(folder, random = false) {
     // Top bar
     screen.appendChild(h('div', { className: 'autoplay-top' },
       h('button', { className: 'autoplay-done', onClick: () => { stopTimer(); Speech.stop(); screen.remove(); render(); } }, 'Done'),
-      h('span', { className: 'autoplay-counter' }, `${pos + 1} / ${shuffled.length}`),
+      h('span', { className: 'autoplay-counter' }, `${starredOnly ? '★ ' : ''}${pos + 1} / ${shuffled.length}`),
     ));
 
     // Card area
