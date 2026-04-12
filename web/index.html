@@ -581,7 +581,8 @@ function renderFolder() {
     ),
     h('div', { className: 'header-title' }, folder.name),
     h('div', { className: 'header-right' },
-      h('button', { className: 'header-btn', onClick: () => showAutoplay(folder), title: 'Autoplay' }, html(ICONS.play)),
+      h('button', { className: 'header-btn', onClick: () => showAutoplay(folder, false), title: 'Autoplay in order' }, html(ICONS.play)),
+      h('button', { className: 'header-btn', onClick: () => showAutoplay(folder, true), title: 'Autoplay shuffled' }, html(ICONS.shuffle)),
       h('button', { className: 'header-btn', onClick: () => showCardEditList(folder), title: 'Edit cards' }, html(ICONS.pencil)),
       h('button', { className: 'header-btn', onClick: () => showCardEdit(folder, null), title: 'Add card' }, html(ICONS.plus)),
     ),
@@ -1008,7 +1009,7 @@ function showCardEditList(folder) {
 // ============================================================
 // AUTOPLAY
 // ============================================================
-function showAutoplay(folder) {
+function showAutoplay(folder, random = false) {
   if (folder.cards.length === 0) return;
 
   let shuffled = [...Array(folder.cards.length).keys()];
@@ -1026,7 +1027,7 @@ function showAutoplay(folder) {
     return arr;
   }
 
-  shuffleArray(shuffled);
+  if (random) shuffleArray(shuffled);
 
   const screen = h('div', { className: 'autoplay-screen' });
 
