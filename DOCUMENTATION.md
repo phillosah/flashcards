@@ -37,13 +37,13 @@ cd web
 python server.py
 ```
 
-Opens `http://localhost:8000` in your browser. Data is saved to `web/flashcards_data.json` on disk.
+Opens `http://localhost:8000` in your browser. Data is saved to `web/data.json` on disk.
 
 **Options:**
 
 ```bash
 python server.py --port 3000
-python server.py --file "C:\Users\Philip\OneDrive\flashcards_data.json"
+python server.py --file "C:\Users\Philip\OneDrive\data.json"
 ```
 
 ### Without the server
@@ -55,6 +55,8 @@ Open `web/index.html` directly in a browser (double-click). Data is stored in th
 ## Deploying to Render
 
 Render is a cloud hosting platform that can run the Python server publicly. A `render.yaml` blueprint at the project root automates the entire setup.
+
+Data is stored in `web/data.json`, which is committed to git. The web version always reflects whatever was last pushed — no persistent disk required.
 
 ### Prerequisites
 
@@ -80,7 +82,7 @@ Render is a cloud hosting platform that can run the Python server publicly. A `r
 
 3. **Deploy**
    - Click **Create Web Service**.
-   - Render installs Python, mounts a 1 GB persistent disk at `/data`, and starts `python server.py`.
+   - Render installs Python and starts `python server.py`.
    - Your app is live at `https://flashcards.onrender.com` (or similar).
 
 ### What `render.yaml` configures
@@ -90,19 +92,27 @@ Render is a cloud hosting platform that can run the Python server publicly. A `r
 | Runtime | Python | Auto-detected from `requirements.txt` |
 | Root directory | `web/` | Server and HTML files |
 | Start command | `python server.py` | Reads `PORT` env var from Render |
-| `DATA_FILE` env var | `/data/flashcards_data.json` | Points at persistent disk |
-| Persistent disk | 1 GB at `/data` | Survives deploys and restarts |
+| `DATA_FILE` env var | `data.json` | Resolved relative to `web/` — comes from git |
 
-### Persistent disk
+### Data sync workflow
 
-Render's free tier does **not** include persistent disks — data would reset on every deploy. The `render.yaml` provisions a 1 GB disk ($0.25/GB/month on paid plans). Without it, use Export/Import to back up your data before each deploy.
+Enter data locally, then push to sync the web version:
+
+```bash
+# After adding/editing cards locally:
+git add web/data.json
+git commit -m "update data"
+git push
+```
+
+Render automatically redeploys on push. The web version then serves the updated `data.json` from git. Any edits made directly on the web version are ephemeral — they are lost on the next deploy. Treat the local copy as the source of truth.
 
 ### Environment variables
 
 | Variable | Default | Description |
 |---|---|---|
 | `PORT` | Set by Render | Server listen port — do not override |
-| `DATA_FILE` | `/data/flashcards_data.json` | Full path to the JSON data file |
+| `DATA_FILE` | `data.json` | Path to the JSON data file (relative to `web/`) |
 
 To change the data file path, edit `DATA_FILE` in the Render dashboard under **Environment**.
 
@@ -115,6 +125,7 @@ FlashCards/
 ├── web/
 │   ├── index.html              ← The entire app (HTML + CSS + JS)
 │   ├── server.py               ← Python server (local + Render)
+│   ├── data.json               ← All card data (committed to git, synced to Render)
 │   └── start.bat               ← Double-click to launch locally
 ├── render.yaml                 ← Render deploy blueprint
 ├── requirements.txt            ← Python deps (stdlib only; signals Python to Render)
@@ -130,7 +141,7 @@ The app is a single-page application with no framework. All logic is vanilla Jav
 ```
 index.html
 ├── DataManager          ← Load/save folders and cards
-│   ├── Server mode      ← GET/POST /api/data → flashcards_data.json
+│   ├── Server mode      ← GET/POST /api/data → data.json
 │   └── Fallback mode    ← localStorage (file:// or server unreachable)
 ├── Speech               ← Web Speech API (TTS)
 ├── Router               ← state.view drives which screen renders
@@ -203,10 +214,10 @@ When opened via `server.py`, all reads and writes go through the server API:
 | `/api/data` | `GET` | Returns the full JSON file contents |
 | `/api/data` | `POST` | Validates and writes the JSON file |
 
-The default data file is `web/flashcards_data.json`. Override with `--file`:
+The default data file is `web/data.json`. Override with `--file`:
 
 ```bash
-python server.py --file "C:\Users\Philip\Dropbox\flashcards_data.json"
+python server.py --file "C:\Users\Philip\Dropbox\data.json"
 ```
 
 Placing the file in a cloud-synced folder (OneDrive, Dropbox, etc.) syncs data across machines.
@@ -308,7 +319,8 @@ A built-in kana-to-romaji converter runs automatically 2 seconds after you stop 
 - **Swipe** left or right (touch or mouse drag, 80 px threshold) to navigate.
 - **Navigation dots** at the bottom show position (capped at 20).
 - **Tap the card** to flip it (3D CSS animation, 0.4 s).
-- **Toolbar buttons:**
+- **Left header buttons:** ← back to folder list, ⊞ open card summary table.
+- **Right toolbar buttons:**
 
 | Icon | Action |
 |---|---|
@@ -373,6 +385,14 @@ Used for both adding and editing a card:
 - Pronunciation row (appears automatically after 2 s idle for Japanese kana): shows the romaji text and a speaker button to hear it aloud.
 - Back text area (label shows the back language).
 - Cancel / Save (Save disabled if front is empty).
+
+### Card Summary modal
+
+Opened via the ⊞ button in the folder header (top left, next to the back arrow).
+
+- Displays all cards in a scrollable table with columns: **#**, **Front**, **Pronunciation**, **Back**.
+- **Search bar** at the top filters rows by matching text in the front or back column (case-insensitive). The `#` column always shows the card's original position in the folder.
+- Tap **Done** to close.
 
 ### Card Edit List modal
 
@@ -444,7 +464,7 @@ Tap the **backup icon** (top left of main screen):
 
 The JSON format is human-readable and can be opened in any text editor. Always export a backup before importing.
 
-In server mode the live data file (`flashcards_data.json`) is itself a backup-compatible JSON file and can be copied or opened directly.
+In server mode the live data file (`web/data.json`) is itself a backup-compatible JSON file and can be copied or opened directly.
 
 ---
 
@@ -518,11 +538,11 @@ Expected — they use separate storage. Export from one and import into the othe
 
 ### Server data file location
 
-The server prints the full file path on startup. Default is `web/flashcards_data.json` next to `server.py`. On Render it is `/data/flashcards_data.json` (persistent disk).
+The server prints the full file path on startup. Default is `web/data.json` next to `server.py`. On Render it is the same `data.json` baked in from git.
 
-### Data lost after Render redeploy
+### Data edited on the web version not persisting after redeploy
 
-If you deployed without a persistent disk (free tier), the filesystem resets on each deploy. Use Export Backup before deploying to save your data, then Import after. Upgrade to a paid Render plan and add the disk to persist data across deploys.
+The web version's filesystem is ephemeral — changes survive until the next Render deploy, then reset to whatever is in git. The intended workflow is to enter data locally, then push `web/data.json` to git to update the web version. If you made changes on the web that you want to keep, use **Export Backup** to download the JSON, copy it to your local `web/data.json`, then commit and push.
 
 ### Render service crashes on startup
 

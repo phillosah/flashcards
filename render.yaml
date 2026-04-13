@@ -7,4 +7,4 @@ services:
     startCommand: python server.py
     envVars:
       - key: DATA_FILE
-        value: flashcards_data.json
+        value: data.json

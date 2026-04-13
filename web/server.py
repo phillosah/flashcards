@@ -24,7 +24,7 @@ _file_lock = threading.Lock()
 
 
 class FlashCardsHandler(http.server.SimpleHTTPRequestHandler):
-    data_file = os.path.join(SCRIPT_DIR, "flashcards_data.json")
+    data_file = os.path.join(SCRIPT_DIR, "data.json")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=SCRIPT_DIR, **kwargs)
@@ -107,7 +107,7 @@ def main():
     env_file = os.environ.get("DATA_FILE", "")
     if env_file and not os.path.isabs(env_file):
         env_file = os.path.join(SCRIPT_DIR, env_file)
-    default_file = env_file or os.path.join(SCRIPT_DIR, "flashcards_data.json")
+    default_file = env_file or os.path.join(SCRIPT_DIR, "data.json")
     parser.add_argument("--file", default=default_file)
     args = parser.parse_args()
 

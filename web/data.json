@@ -1,0 +1,36 @@
+[
+  {
+    "id": "68aca350-e26f-4fd9-94f6-4c9e9ac98a7b",
+    "name": "Japanese 2",
+    "cards": [
+      {
+        "id": "7de9bbe1-a940-4c3c-a00e-7e4a99f444ff",
+        "front": "売場",
+        "back": "sales area",
+        "frontPronunciation": "売場",
+        "createdAt": "2026-04-12T16:11:10.019Z"
+      },
+      {
+        "id": "be5ccdce-33f3-45b3-9436-ba74abc27af9",
+        "front": "一番",
+        "back": "number one",
+        "frontPronunciation": "一番",
+        "createdAt": "2026-04-12T16:11:40.328Z"
+      },
+      {
+        "id": "74b5a4e8-841d-4b42-9912-5e59c61a1c92",
+        "front": "ツアー",
+        "back": "tour",
+        "frontPronunciation": "tsua-",
+        "createdAt": "2026-04-12T16:12:13.988Z"
+      }
+    ],
+    "settings": {
+      "frontLanguage": "ja-JP",
+      "backLanguage": "en-US",
+      "frontColorHex": "#1B4F72",
+      "backColorHex": "#1E8449"
+    },
+    "createdAt": "2026-04-12T16:10:35.465Z"
+  }
+]

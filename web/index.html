@@ -179,6 +179,14 @@ input[type="color"] { width: 44px; height: 44px; padding: 2px; border-radius: 10
 /* === STORAGE BADGE === */
 .storage-badge { font-size: 11px; margin-left: 6px; opacity: 0.5; vertical-align: middle; }
 
+/* === SUMMARY TABLE === */
+.summary-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.summary-table th { text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); border-bottom: 1px solid rgba(255,255,255,0.08); position: sticky; top: 0; background: var(--surface); }
+.summary-table td { padding: 10px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: top; line-height: 1.4; }
+.summary-table tr:last-child td { border-bottom: none; }
+.summary-table .col-num { color: var(--text3); width: 32px; }
+.summary-table .col-pron { color: var(--text3); font-size: 12px; }
+
 /* === SCROLLBAR === */
 .content::-webkit-scrollbar { width: 0; }
 </style>
@@ -211,6 +219,7 @@ const ICONS = {
   star: '<svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/></svg>',
   starFilled: '<svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="currentColor" stroke-linejoin="round"/></svg>',
   starPlay: '<svg viewBox="0 0 24 24"><polygon points="2,4 13,12 2,20" fill="currentColor"/><g transform="translate(13,1) scale(0.46)"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="currentColor"/></g></svg>',
+  summary: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="2" rx="1" fill="currentColor"/><rect x="3" y="8" width="18" height="1" fill="currentColor" opacity="0.3"/><rect x="3" y="11" width="4" height="8" rx="1" fill="currentColor" opacity="0.4"/><rect x="9" y="11" width="6" height="8" rx="1" fill="currentColor" opacity="0.4"/><rect x="17" y="11" width="4" height="8" rx="1" fill="currentColor" opacity="0.4"/><line x1="3" y1="9.5" x2="21" y2="9.5" stroke="currentColor" stroke-width="1" opacity="0.4"/></svg>',
 };
 
 // ============================================================
@@ -589,6 +598,7 @@ function renderFolder() {
   const header = h('div', { className: 'header' },
     h('div', { className: 'header-left' },
       h('button', { className: 'header-btn', onClick: () => navigate('main') }, html(ICONS.back)),
+      h('button', { className: 'header-btn', onClick: () => showCardSummary(folder), title: 'Summary table' }, html(ICONS.summary)),
     ),
     h('div', { className: 'header-title' }, folder.name),
     h('div', { className: 'header-right' },
@@ -972,6 +982,73 @@ function showCardEdit(folder, card) {
   overlay.appendChild(sheet);
   document.body.appendChild(overlay);
   setTimeout(() => frontInput.focus(), 100);
+}
+
+// ============================================================
+// CARD SUMMARY MODAL
+// ============================================================
+function showCardSummary(folder) {
+  const freshFolder = DataManager.getFolder(folder.id);
+  let searchText = '';
+
+  const overlay = h('div', { className: 'modal-overlay', onClick: e => { if (e.target === overlay) overlay.remove(); } });
+  const sheet = h('div', { className: 'modal-sheet' });
+
+  sheet.appendChild(h('div', { className: 'modal-header' },
+    h('div', {}),
+    h('h3', {}, `${freshFolder.name} — ${freshFolder.cards.length} card${freshFolder.cards.length !== 1 ? 's' : ''}`),
+    h('button', { style: { fontWeight: '700', color: 'var(--accent)' }, onClick: () => overlay.remove() }, 'Done'),
+  ));
+
+  const searchBar = h('div', { className: 'search-bar' },
+    h('input', { type: 'text', placeholder: 'Search front or back...', onInput: e => { searchText = e.target.value; rebuildTable(); } })
+  );
+  sheet.appendChild(searchBar);
+
+  const body = h('div', { style: { padding: '0 4px 20px' } });
+  sheet.appendChild(body);
+
+  function rebuildTable() {
+    body.innerHTML = '';
+    if (freshFolder.cards.length === 0) {
+      body.appendChild(h('div', { style: { textAlign: 'center', padding: '40px 20px', color: 'var(--text3)' } }, 'No cards yet.'));
+      return;
+    }
+    const q = searchText.toLowerCase();
+    const filtered = q
+      ? freshFolder.cards.map((card, i) => ({ card, i })).filter(({ card }) =>
+          (card.front || '').toLowerCase().includes(q) || (card.back || '').toLowerCase().includes(q))
+      : freshFolder.cards.map((card, i) => ({ card, i }));
+
+    if (filtered.length === 0) {
+      body.appendChild(h('div', { style: { textAlign: 'center', padding: '40px 20px', color: 'var(--text3)' } }, 'No matching cards.'));
+      return;
+    }
+    const table = h('table', { className: 'summary-table' });
+    table.appendChild(h('thead', {},
+      h('tr', {},
+        h('th', { className: 'col-num' }, '#'),
+        h('th', {}, 'Front'),
+        h('th', {}, 'Pronunciation'),
+        h('th', {}, 'Back'),
+      )
+    ));
+    const tbody = h('tbody', {});
+    filtered.forEach(({ card, i }) => {
+      tbody.appendChild(h('tr', {},
+        h('td', { className: 'col-num' }, String(i + 1)),
+        h('td', {}, card.front || ''),
+        h('td', { className: 'col-pron' }, card.frontPronunciation || ''),
+        h('td', {}, card.back || ''),
+      ));
+    });
+    table.appendChild(tbody);
+    body.appendChild(table);
+  }
+
+  rebuildTable();
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay);
 }
 
 // ============================================================
