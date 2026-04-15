@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.6.0 — 2026-04-15
+
+### Fixed
+- **Data loss on refresh** — save now uses `keepalive: true` so the POST completes even if the page is refreshed mid-flight. Every save also mirrors to `localStorage` instantly as a backup. A `sendBeacon` flush fires on `beforeunload` for an additional safety net.
+
+---
+
 ## v1.5.0 — 2026-04-15
 
 ### Changed
