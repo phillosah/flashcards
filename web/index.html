@@ -284,16 +284,17 @@ const DataManager = {
 
   save() {
     if (this._useServer) {
-      // Debounced async save to server
+      // Always mirror to localStorage so beforeunload flush has fresh data
+      localStorage.setItem(this.KEY, JSON.stringify(this._data));
       if (this._saving) { this._pendingSave = true; return; }
       this._saving = true;
       fetch('/api/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(this._data, null, 2),
+        keepalive: true,  // completes even if the page is refreshed/closed
       }).catch(() => {
-        // Server unreachable — save to localStorage as safety net
-        localStorage.setItem(this.KEY, JSON.stringify(this._data));
+        // Server unreachable — localStorage already written above
       }).finally(() => {
         this._saving = false;
         if (this._pendingSave) { this._pendingSave = false; this.save(); }
@@ -301,6 +302,15 @@ const DataManager = {
     } else {
       localStorage.setItem(this.KEY, JSON.stringify(this._data));
     }
+  },
+
+  // Call on beforeunload to flush any in-flight save
+  flushSync() {
+    if (!this._useServer || !this._data) return;
+    const body = JSON.stringify(this._data, null, 2);
+    try {
+      navigator.sendBeacon('/api/data', new Blob([body], { type: 'application/json' }));
+    } catch { /* sendBeacon not supported — keepalive fetch already handles it */ }
   },
 
   folders() { return this.load(); },
@@ -1307,6 +1317,7 @@ document.addEventListener('keydown', e => {
 // ============================================================
 // INIT
 // ============================================================
+window.addEventListener('beforeunload', () => DataManager.flushSync());
 DataManager.init().then(() => render());
 </script>
 </body>
