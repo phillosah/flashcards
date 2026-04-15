@@ -602,7 +602,7 @@ function renderFolder() {
       h('button', { className: 'header-btn', onClick: () => navigate('main') }, html(ICONS.back)),
       h('button', { className: 'header-btn', onClick: () => showCardSummary(folder), title: 'Summary table' }, html(ICONS.summary)),
     ),
-    h('div', { className: 'header-title' }, folder.name),
+    h('div', { className: 'header-title' }),
     h('div', { className: 'header-right' },
       h('button', { className: 'header-btn', onClick: () => showAutoplay(folder, false), title: 'Autoplay in order' }, html(ICONS.play)),
       h('button', { className: 'header-btn', onClick: () => showAutoplay(folder, true), title: 'Autoplay shuffled' }, html(ICONS.shuffle)),
@@ -629,6 +629,10 @@ function renderFolder() {
     app.appendChild(content);
     return;
   }
+
+  // Folder name above card
+  const folderLabel = h('div', { style: { fontSize: '18px', fontWeight: '700', color: 'var(--text)', marginBottom: '4px', textAlign: 'center' } }, folder.name);
+  content.appendChild(folderLabel);
 
   // Card counter
   const counter = h('div', { className: 'card-counter' });
