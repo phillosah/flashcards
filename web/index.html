@@ -179,6 +179,12 @@ input[type="color"] { width: 44px; height: 44px; padding: 2px; border-radius: 10
 /* === STORAGE BADGE === */
 .storage-badge { font-size: 11px; margin-left: 6px; opacity: 0.5; vertical-align: middle; }
 
+/* === SAVE TOAST === */
+.save-toast { position: fixed; bottom: calc(24px + var(--safe-bottom)); left: 50%; transform: translateX(-50%); padding: 8px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; z-index: 999; pointer-events: none; opacity: 1; transition: opacity 0.4s; white-space: nowrap; }
+.save-toast.ok  { background: rgba(48,209,88,0.92);  color: #fff; }
+.save-toast.err { background: rgba(255,59,48,0.92);   color: #fff; }
+.save-toast.fade { opacity: 0; }
+
 /* === SUMMARY TABLE === */
 .summary-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .summary-table th { text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); border-bottom: 1px solid rgba(255,255,255,0.08); position: sticky; top: 0; background: var(--surface); }
@@ -284,23 +290,33 @@ const DataManager = {
 
   save() {
     if (this._useServer) {
-      // Always mirror to localStorage so beforeunload flush has fresh data
+      // Mirror to localStorage immediately as backup
       localStorage.setItem(this.KEY, JSON.stringify(this._data));
       if (this._saving) { this._pendingSave = true; return; }
       this._saving = true;
+      const body = JSON.stringify(this._data, null, 2);
       fetch('/api/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(this._data, null, 2),
-        keepalive: true,  // completes even if the page is refreshed/closed
-      }).catch(() => {
-        // Server unreachable — localStorage already written above
+        body,
+        keepalive: true,
+      }).then(res => {
+        if (res.ok) {
+          showToast('✓ Saved');
+        } else {
+          res.text().then(t => console.error('[save] Server error', res.status, t));
+          showToast('✗ Save failed (' + res.status + ')', 'err');
+        }
+      }).catch(err => {
+        console.error('[save] Network error:', err);
+        showToast('✗ Save failed (network)', 'err');
       }).finally(() => {
         this._saving = false;
         if (this._pendingSave) { this._pendingSave = false; this.save(); }
       });
     } else {
       localStorage.setItem(this.KEY, JSON.stringify(this._data));
+      showToast('✓ Saved');
     }
   },
 
@@ -361,6 +377,23 @@ const DataManager = {
     this.save();
   }
 };
+
+// ============================================================
+// SAVE TOAST
+// ============================================================
+let _toastTimer = null;
+function showToast(msg, type = 'ok') {
+  document.querySelector('.save-toast')?.remove();
+  clearTimeout(_toastTimer);
+  const t = document.createElement('div');
+  t.className = `save-toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  _toastTimer = setTimeout(() => {
+    t.classList.add('fade');
+    setTimeout(() => t.remove(), 420);
+  }, 1800);
+}
 
 function uid() {
   return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
