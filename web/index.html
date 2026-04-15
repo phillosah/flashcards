@@ -630,14 +630,15 @@ function renderFolder() {
     return;
   }
 
-  // Folder name — always visible at the top
-  content.appendChild(h('div', { style: { fontSize: '18px', fontWeight: '700', color: 'var(--text)', padding: '14px 16px 2px', textAlign: 'center', flexShrink: '0' } }, folder.name));
+  // Folder name + card counter on the same line
+  const counter = h('div', { className: 'card-counter', style: { margin: '0', flexShrink: '0' } });
+  content.appendChild(h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px 16px 2px', flexShrink: '0' } },
+    h('span', { style: { fontSize: '18px', fontWeight: '700', color: 'var(--text)' } }, folder.name),
+    counter,
+  ));
 
   // Card area — centered in remaining space
   const cardArea = h('div', { style: { flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' } });
-
-  // Card counter
-  const counter = h('div', { className: 'card-counter' });
   // Card container
   const container = h('div', { className: 'card-container' });
   // Nav dots
@@ -648,7 +649,6 @@ function renderFolder() {
 
   const cardRow = h('div', { className: 'card-nav-row' }, prevBtn, container, nextBtn);
 
-  cardArea.appendChild(counter);
   cardArea.appendChild(cardRow);
   cardArea.appendChild(dotsContainer);
   content.appendChild(cardArea);
