@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.7.0 — 2026-04-15
+
+### Added
+- **Save toast** — green "✓ Saved" confirmation appears after every successful save; red "✗ Save failed (status)" appears on server errors so failures are immediately visible.
+
+### Fixed
+- **Silent save failures** — the client now checks `response.ok` and surfaces HTTP error codes (e.g. 502, 500). Previously any server-side error was silently ignored.
+
+---
+
 ## v1.6.0 — 2026-04-15
 
 ### Fixed

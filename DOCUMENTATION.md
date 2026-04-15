@@ -602,3 +602,50 @@ The web version's filesystem is ephemeral — changes survive until the next Ren
 ### Render service crashes on startup
 
 Check the Render logs for the error. The most common cause is the `PORT` env var not being an integer — this is set automatically by Render and should not be overridden manually.
+
+### VPS: save shows "✗ Save failed (502)"
+
+502 means Nginx reached the Python server but the request failed. Check the service logs while triggering a save:
+
+```bash
+sudo journalctl -u flashcards -f
+```
+
+Common causes:
+
+**Permission denied writing `data.json.tmp`** — the service user lacks write access to the data directory:
+
+```bash
+# If using /srv/flashcards/web/data.json
+sudo chown webapps:webapps /srv/flashcards/web
+sudo chown webapps:webapps /srv/flashcards/web/data.json
+
+# If using /var/lib/flashcards/data.json (recommended)
+sudo chown webapps:webapps /var/lib/flashcards
+sudo chown webapps:webapps /var/lib/flashcards/data.json
+```
+
+Note: the directory itself needs to be owned by the service user because saving creates a `.tmp` file in the same directory before renaming it.
+
+**`DATA_FILE` env var not applied** — verify the running service is using the correct path:
+
+```bash
+curl http://localhost:8000/api/ping
+# "data_file" field shows the active path
+```
+
+If it shows `/srv/flashcards/web/data.json` instead of `/var/lib/flashcards/data.json`, the env var is not set. Edit the service and reload:
+
+```bash
+sudo systemctl edit --full flashcards
+# Add under [Service]: Environment=DATA_FILE=/var/lib/flashcards/data.json
+sudo systemctl daemon-reload && sudo systemctl restart flashcards
+```
+
+**SELinux blocking the write** — check for AVC denials:
+
+```bash
+sudo ausearch -m avc -ts recent | tail -30
+# Fix with:
+sudo chcon -t httpd_sys_rw_content_t /var/lib/flashcards/data.json
+```
