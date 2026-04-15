@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.5.0 — 2026-04-15
+
+### Changed
+- **Card size** reduced (max-width 360px → 280px) for a more compact layout.
+
+---
+
 ## v1.4.0 — 2026-04-15
 
 ### Changed
