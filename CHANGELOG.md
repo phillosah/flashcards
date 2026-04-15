@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.0 — 2026-04-15
+
+### Changed
+- **Folder name** moved from the header bar into the card area, pinned above the card counter so it is always visible regardless of screen size.
+
+---
+
 ## v1.3.0 — 2026-04-13
 
 ### Added

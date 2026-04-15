@@ -521,7 +521,7 @@ function renderMain() {
             title: DataManager._useServer ? 'Saving to server file' : 'Saving to localStorage'
           }, DataManager._useServer ? '☁' : '⚠'),
         ),
-        h('div', { style: { fontSize: '10px', color: 'var(--text3)', fontWeight: '400', marginTop: '1px' } }, 'v1.3.0'),
+        h('div', { style: { fontSize: '10px', color: 'var(--text3)', fontWeight: '400', marginTop: '1px' } }, 'v1.4.0'),
       ),
       h('div', { className: 'header-right' },
         h('button', { className: 'header-btn', onClick: showAddFolderDialog, title: 'New Folder' }, html(ICONS.folderPlus)),
@@ -617,7 +617,7 @@ function renderFolder() {
   );
   app.appendChild(header);
 
-  const content = h('div', { className: 'content', style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' } });
+  const content = h('div', { className: 'content', style: { display: 'flex', flexDirection: 'column', alignItems: 'center' } });
 
   if (folder.cards.length === 0) {
     content.appendChild(h('div', { className: 'empty-state' },
@@ -630,9 +630,11 @@ function renderFolder() {
     return;
   }
 
-  // Folder name above card
-  const folderLabel = h('div', { style: { fontSize: '18px', fontWeight: '700', color: 'var(--text)', marginBottom: '4px', textAlign: 'center' } }, folder.name);
-  content.appendChild(folderLabel);
+  // Folder name — always visible at the top
+  content.appendChild(h('div', { style: { fontSize: '18px', fontWeight: '700', color: 'var(--text)', padding: '14px 16px 2px', textAlign: 'center', flexShrink: '0' } }, folder.name));
+
+  // Card area — centered in remaining space
+  const cardArea = h('div', { style: { flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' } });
 
   // Card counter
   const counter = h('div', { className: 'card-counter' });
@@ -646,9 +648,10 @@ function renderFolder() {
 
   const cardRow = h('div', { className: 'card-nav-row' }, prevBtn, container, nextBtn);
 
-  content.appendChild(counter);
-  content.appendChild(cardRow);
-  content.appendChild(dotsContainer);
+  cardArea.appendChild(counter);
+  cardArea.appendChild(cardRow);
+  cardArea.appendChild(dotsContainer);
+  content.appendChild(cardArea);
   app.appendChild(content);
 
   function buildCard() {
