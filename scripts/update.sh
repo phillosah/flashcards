@@ -1,6 +1,9 @@
 #!/bin/bash
-# update.sh — Pull latest code/data from git and restart FlashCards
+# update.sh — Pull latest code from git and restart FlashCards
 # Usage: bash /srv/flashcards/scripts/update.sh
+#
+# Data file lives at /var/lib/flashcards/data.json (outside the repo)
+# so git pull never touches live data.
 
 set -e
 

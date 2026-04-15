@@ -5,16 +5,17 @@
 1. [Overview](#overview)
 2. [Quick Start](#quick-start)
 3. [Deploying to Render](#deploying-to-render)
-4. [Project Structure](#project-structure)
-5. [Architecture](#architecture)
-6. [Data Models](#data-models)
-7. [Data Storage](#data-storage)
-8. [Speech & Pronunciation](#speech--pronunciation)
-9. [Views](#views)
-10. [User Guide](#user-guide)
-11. [Backup & Restore](#backup--restore)
-12. [Extending the App](#extending-the-app)
-13. [Troubleshooting](#troubleshooting)
+4. [VPS Deployment](#vps-deployment)
+5. [Project Structure](#project-structure)
+6. [Architecture](#architecture)
+7. [Data Models](#data-models)
+8. [Data Storage](#data-storage)
+9. [Speech & Pronunciation](#speech--pronunciation)
+10. [Views](#views)
+11. [User Guide](#user-guide)
+12. [Backup & Restore](#backup--restore)
+13. [Extending the App](#extending-the-app)
+14. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -57,6 +58,8 @@ Open `web/index.html` directly in a browser (double-click). Data is stored in th
 Render is a cloud hosting platform that can run the Python server publicly. A `render.yaml` blueprint at the project root automates the entire setup.
 
 Data is stored in `web/data.json`, which is committed to git. The web version always reflects whatever was last pushed — no persistent disk required.
+
+> **Running on a VPS?** See the [VPS Deployment](#vps-deployment) section below for persistent storage setup.
 
 ### Prerequisites
 
@@ -115,6 +118,58 @@ Render automatically redeploys on push. The web version then serves the updated 
 | `DATA_FILE` | `data.json` | Path to the JSON data file (relative to `web/`) |
 
 To change the data file path, edit `DATA_FILE` in the Render dashboard under **Environment**.
+
+---
+
+## VPS Deployment
+
+For a Rocky Linux (or similar) VPS with persistent storage, the data file lives **outside** the git repo so that `git pull` never overwrites live data.
+
+### Data file setup (one time)
+
+```bash
+sudo mkdir -p /var/lib/flashcards
+sudo chown webapps:webapps /var/lib/flashcards
+# Seed with the repo's starting data
+sudo cp /srv/flashcards/web/data.json /var/lib/flashcards/data.json
+```
+
+### systemd service
+
+Set `DATA_FILE` to the persistent path in `/etc/systemd/system/flashcards.service`:
+
+```ini
+[Service]
+Environment=DATA_FILE=/var/lib/flashcards/data.json
+```
+
+Reload after editing:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart flashcards
+```
+
+### Updating the app
+
+`scripts/update.sh` pulls code and restarts the service. Because the data file is outside the repo, it is never touched by `git pull`.
+
+```bash
+bash /srv/flashcards/scripts/update.sh
+```
+
+### Backup live data
+
+```bash
+cp /var/lib/flashcards/data.json ~/flashcards_backup_$(date +%F).json
+```
+
+### Environment variables
+
+| Variable | Value | Description |
+|---|---|---|
+| `PORT` | Set by Render / systemd | Server listen port |
+| `DATA_FILE` | `/var/lib/flashcards/data.json` | Persistent data path outside git repo |
 
 ---
 
