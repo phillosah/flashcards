@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.8.0 — 2026-04-15
+
+### Fixed
+- **Brave / cached data on load** — GET `/api/data` now uses `cache: 'no-store'` and a timestamp query param so Brave never serves a stale 304 response on page load.
+- **POST 304 caching** — same cache options applied to the save fetch.
+
+---
+
 ## v1.7.0 — 2026-04-15
 
 ### Added

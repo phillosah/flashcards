@@ -271,7 +271,7 @@ const DataManager = {
   async init() {
     if (this._useServer) {
       try {
-        const res = await fetch('/api/data');
+        const res = await fetch('/api/data?_=' + Date.now(), { cache: 'no-store' });
         if (res.ok) { this._data = await res.json(); return; }
       } catch { /* server not reachable, fall back */ }
       this._useServer = false;
@@ -299,6 +299,7 @@ const DataManager = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,
+        cache: 'no-store',
       }).then(res => {
         if (res.ok) {
           showToast('✓ Saved');
@@ -563,7 +564,7 @@ function renderMain() {
             title: DataManager._useServer ? 'Saving to server file' : 'Saving to localStorage'
           }, DataManager._useServer ? '☁' : '⚠'),
         ),
-        h('div', { style: { fontSize: '10px', color: 'var(--text3)', fontWeight: '400', marginTop: '1px' } }, 'v1.7.0'),
+        h('div', { style: { fontSize: '10px', color: 'var(--text3)', fontWeight: '400', marginTop: '1px' } }, 'v1.8.0'),
       ),
       h('div', { className: 'header-right' },
         h('button', { className: 'header-btn', onClick: showAddFolderDialog, title: 'New Folder' }, html(ICONS.folderPlus)),
