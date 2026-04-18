@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.9.0 — 2026-04-15
+
+### Fixed
+- **Inconsistent saves** — replaced the `_saving` flag with a debounce (300 ms) + automatic retry (up to 3 attempts with 600 ms backoff) so transient server or network hiccups no longer silently drop a save.
+- **flushSync cache-bust** — `sendBeacon` on page unload now also includes the `?_=` timestamp to avoid Brave caching the beacon.
+
+---
+
 ## v1.8.0 — 2026-04-15
 
 ### Fixed

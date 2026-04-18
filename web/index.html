@@ -289,44 +289,50 @@ const DataManager = {
   },
 
   save() {
-    if (this._useServer) {
-      // Mirror to localStorage immediately as backup
-      localStorage.setItem(this.KEY, JSON.stringify(this._data));
-      if (this._saving) { this._pendingSave = true; return; }
-      this._saving = true;
-      const body = JSON.stringify(this._data, null, 2);
-      fetch('/api/data?_=' + Date.now(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-        cache: 'no-store',
-      }).then(res => {
-        if (res.ok) {
-          showToast('✓ Saved');
-        } else {
-          res.text().then(t => console.error('[save] Server error', res.status, t));
-          showToast('✗ Save failed (' + res.status + ')', 'err');
-        }
-      }).catch(err => {
-        console.error('[save] Network error:', err);
-        showToast('✗ Save failed (network)', 'err');
-      }).finally(() => {
-        this._saving = false;
-        if (this._pendingSave) { this._pendingSave = false; this.save(); }
-      });
-    } else {
-      localStorage.setItem(this.KEY, JSON.stringify(this._data));
-      showToast('✓ Saved');
-    }
+    // Always write to localStorage immediately as a safety net
+    localStorage.setItem(this.KEY, JSON.stringify(this._data));
+    if (!this._useServer) { showToast('✓ Saved'); return; }
+    // Debounce: collapse rapid successive saves into one request
+    clearTimeout(this._saveTimer);
+    this._saveTimer = setTimeout(() => this._doSave(), 300);
   },
 
-  // Call on beforeunload to flush any in-flight save
+  _doSave(attempt = 1) {
+    const body = JSON.stringify(this._data, null, 2);
+    fetch('/api/data?_=' + Date.now(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      cache: 'no-store',
+    }).then(res => {
+      if (res.ok) {
+        showToast('✓ Saved');
+      } else if (attempt < 3) {
+        console.warn('[save] attempt', attempt, 'failed with', res.status, '— retrying');
+        setTimeout(() => this._doSave(attempt + 1), 600 * attempt);
+      } else {
+        res.text().then(t => console.error('[save] gave up after 3 attempts:', res.status, t));
+        showToast('✗ Save failed (' + res.status + ')', 'err');
+      }
+    }).catch(err => {
+      if (attempt < 3) {
+        console.warn('[save] attempt', attempt, 'network error — retrying:', err);
+        setTimeout(() => this._doSave(attempt + 1), 600 * attempt);
+      } else {
+        console.error('[save] gave up after 3 attempts:', err);
+        showToast('✗ Save failed (network)', 'err');
+      }
+    });
+  },
+
+  // Best-effort flush on page unload
   flushSync() {
     if (!this._useServer || !this._data) return;
+    clearTimeout(this._saveTimer);
     const body = JSON.stringify(this._data, null, 2);
     try {
-      navigator.sendBeacon('/api/data', new Blob([body], { type: 'application/json' }));
-    } catch { /* sendBeacon not supported — keepalive fetch already handles it */ }
+      navigator.sendBeacon('/api/data?_=' + Date.now(), new Blob([body], { type: 'application/json' }));
+    } catch { /* not supported */ }
   },
 
   folders() { return this.load(); },
@@ -564,7 +570,7 @@ function renderMain() {
             title: DataManager._useServer ? 'Saving to server file' : 'Saving to localStorage'
           }, DataManager._useServer ? '☁' : '⚠'),
         ),
-        h('div', { style: { fontSize: '10px', color: 'var(--text3)', fontWeight: '400', marginTop: '1px' } }, 'v1.8.0'),
+        h('div', { style: { fontSize: '10px', color: 'var(--text3)', fontWeight: '400', marginTop: '1px' } }, 'v1.9.0'),
       ),
       h('div', { className: 'header-right' },
         h('button', { className: 'header-btn', onClick: showAddFolderDialog, title: 'New Folder' }, html(ICONS.folderPlus)),
