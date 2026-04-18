@@ -299,7 +299,6 @@ const DataManager = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,
-        keepalive: true,
       }).then(res => {
         if (res.ok) {
           showToast('✓ Saved');
