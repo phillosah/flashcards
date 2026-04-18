@@ -295,7 +295,7 @@ const DataManager = {
       if (this._saving) { this._pendingSave = true; return; }
       this._saving = true;
       const body = JSON.stringify(this._data, null, 2);
-      fetch('/api/data', {
+      fetch('/api/data?_=' + Date.now(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,
