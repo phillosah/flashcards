@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.10.0 — 2026-04-15
+
+### Fixed
+- **localStorage overriding server data** — on init, a successful server load now clears localStorage so stale local data can never shadow real server data.
+- **Misleading fallback** — localStorage is now only used as a fallback when the server is completely unreachable (network error). A non-200 HTTP response no longer silently loads stale local data.
+
+---
+
 ## v1.9.0 — 2026-04-15
 
 ### Fixed

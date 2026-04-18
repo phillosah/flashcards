@@ -270,13 +270,25 @@ const DataManager = {
   // Async init — must be called once before first render
   async init() {
     if (this._useServer) {
+      let networkError = false;
       try {
         const res = await fetch('/api/data?_=' + Date.now(), { cache: 'no-store' });
-        if (res.ok) { this._data = await res.json(); return; }
-      } catch { /* server not reachable, fall back */ }
+        if (res.ok) {
+          this._data = await res.json();
+          localStorage.removeItem(this.KEY); // server is source of truth — wipe stale local data
+          return;
+        }
+        console.warn('[init] Server returned', res.status, '— not falling back to localStorage');
+        this._data = [];
+        return;
+      } catch (e) {
+        networkError = true;
+        console.warn('[init] Server unreachable:', e);
+      }
+      if (!networkError) return;
       this._useServer = false;
     }
-    // localStorage fallback
+    // Only reach here in file:// mode or when server is completely unreachable
     try {
       const raw = localStorage.getItem(this.KEY);
       this._data = raw ? JSON.parse(raw) : [];
@@ -570,7 +582,7 @@ function renderMain() {
             title: DataManager._useServer ? 'Saving to server file' : 'Saving to localStorage'
           }, DataManager._useServer ? '☁' : '⚠'),
         ),
-        h('div', { style: { fontSize: '10px', color: 'var(--text3)', fontWeight: '400', marginTop: '1px' } }, 'v1.9.0'),
+        h('div', { style: { fontSize: '10px', color: 'var(--text3)', fontWeight: '400', marginTop: '1px' } }, 'v1.10.0'),
       ),
       h('div', { className: 'header-right' },
         h('button', { className: 'header-btn', onClick: showAddFolderDialog, title: 'New Folder' }, html(ICONS.folderPlus)),
