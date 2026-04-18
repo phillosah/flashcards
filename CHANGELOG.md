@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.11.0 — 2026-04-15
+
+### Added
+- **Save+ button** — when creating a new card, a green **Save+** button appears next to Save. Tapping it saves the current card and immediately opens a fresh New Card modal, making bulk entry faster.
+
+---
+
 ## v1.10.0 — 2026-04-15
 
 ### Fixed

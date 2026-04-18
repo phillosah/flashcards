@@ -582,7 +582,7 @@ function renderMain() {
             title: DataManager._useServer ? 'Saving to server file' : 'Saving to localStorage'
           }, DataManager._useServer ? '☁' : '⚠'),
         ),
-        h('div', { style: { fontSize: '10px', color: 'var(--text3)', fontWeight: '400', marginTop: '1px' } }, 'v1.10.0'),
+        h('div', { style: { fontSize: '10px', color: 'var(--text3)', fontWeight: '400', marginTop: '1px' } }, 'v1.11.0'),
       ),
       h('div', { className: 'header-right' },
         h('button', { className: 'header-btn', onClick: showAddFolderDialog, title: 'New Folder' }, html(ICONS.folderPlus)),
@@ -1016,8 +1016,8 @@ function showCardEdit(folder, card) {
   const backInput = h('textarea', { placeholder: 'Translation / meaning...', rows: '3', onInput: e => { back = e.target.value; } });
   backInput.value = back;
 
-  const saveBtn = h('button', { style: { fontWeight: '700', color: 'var(--accent)' }, onClick: () => {
-    if (!front.trim()) return;
+  function doSave() {
+    if (!front.trim()) return false;
     clearTimeout(pronTimer);
     if (isNew) {
       DataManager.addCard(folder.id, { id: uid(), front: front.trim(), back: back.trim(), frontPronunciation: pronunciation, createdAt: new Date().toISOString() });
@@ -1027,14 +1027,26 @@ function showCardEdit(folder, card) {
       card.frontPronunciation = pronunciation;
       DataManager.updateCard(folder.id, card);
     }
-    overlay.remove();
-    render();
+    return true;
+  }
+
+  const saveBtn = h('button', { style: { fontWeight: '700', color: 'var(--accent)' }, onClick: () => {
+    if (doSave()) { overlay.remove(); render(); }
   } }, 'Save');
+
+  const headerRight = isNew
+    ? h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } },
+        h('button', { style: { fontWeight: '700', color: 'var(--success)', fontSize: '14px' }, onClick: () => {
+          if (doSave()) { overlay.remove(); render(); showCardEdit(DataManager.getFolder(folder.id), null); }
+        } }, 'Save+'),
+        saveBtn,
+      )
+    : saveBtn;
 
   sheet.appendChild(h('div', { className: 'modal-header' },
     h('button', { onClick: () => { clearTimeout(pronTimer); overlay.remove(); } }, 'Cancel'),
     h('h3', {}, isNew ? 'New Card' : 'Edit Card'),
-    saveBtn,
+    headerRight,
   ));
 
   sheet.appendChild(h('div', { className: 'modal-body' },
